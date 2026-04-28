@@ -1,0 +1,41 @@
+# ===== Flutter =====
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# ===== Android =====
+android/.gradle/
+android/app/build/
+android/local.properties
+*.keystore
+*.jks
+
+# ===== iOS =====
+ios/Flutter/.last_build_id
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Runner.xcworkspace/
+ios/DerivedData/
+
+# ===== Firebase / Secrets =====
+google-services.json
+firebase_options.dart
+.env
+
+# ===== Node (firebase_functions) =====
+firebase_functions/node_modules/
+node_modules/
+npm-debug.log*
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.log
+
+# ===== Misc =====
+*.tmp
+*.swp
+.DS_Store
