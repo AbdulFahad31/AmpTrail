@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final minDelay = Future.delayed(const Duration(seconds: 2));
 
     final user = FirebaseAuth.instance.currentUser;
-    
+
     if (user != null) {
       // Preload critical data into memory cache during splash screen
       try {
@@ -40,16 +40,21 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (e) {
         debugPrint("Preload error: $e");
       }
-      
+
       if (!mounted) return;
 
-      // Check if admin (Mock Implementation based on existing code)
-      if (user.phoneNumber == '+911234567890') {
-         Navigator.pushReplacement(
+      // Check admin status via custom claims / Firestore /admins
+      final isAdmin = await UserService().isUserAdmin();
+      if (!mounted) return;
+
+      if (isAdmin) {
+        Navigator.pushReplacement(
           context,
           PageRouteBuilder(
             pageBuilder: (context, anim, secAnim) => const AdminDashboard(),
-            transitionsBuilder: (context, anim, secAnim, child) => FadeTransition(opacity: anim, child: child),
+            transitionsBuilder:
+                (context, anim, secAnim, child) =>
+                    FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 800),
           ),
         );
@@ -58,21 +63,25 @@ class _SplashScreenState extends State<SplashScreen> {
           context,
           PageRouteBuilder(
             pageBuilder: (context, anim, secAnim) => const UserDashboard(),
-            transitionsBuilder: (context, anim, secAnim, child) => FadeTransition(opacity: anim, child: child),
+            transitionsBuilder:
+                (context, anim, secAnim, child) =>
+                    FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 800),
           ),
         );
       }
     } else {
       await minDelay;
-      
+
       if (!mounted) return;
-      
+
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (context, anim, secAnim) => const LoginScreen(),
-          transitionsBuilder: (context, anim, secAnim, child) => FadeTransition(opacity: anim, child: child),
+          transitionsBuilder:
+              (context, anim, secAnim, child) =>
+                  FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 800),
         ),
       );

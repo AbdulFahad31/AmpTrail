@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:amptrail_mini/constants/colors.dart';
+import 'package:amptrail_mini/config/api_keys.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -44,7 +46,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Payment Successful!"), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text("Payment Successful!"),
+          backgroundColor: Colors.green,
+        ),
       );
       setState(() => _isProcessing = false);
       widget.onPaymentSuccess();
@@ -66,7 +71,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void _handleExternalWallet(ExternalWalletResponse response) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("External Wallet Selected: ${response.walletName}")),
+        SnackBar(
+          content: Text("External Wallet Selected: ${response.walletName}"),
+        ),
       );
     }
   }
@@ -75,45 +82,60 @@ class _PaymentScreenState extends State<PaymentScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      // 1. Generate Order ID using Razorpay API directly in Flutter
-      // NOTE: This places the Secret in the app. For production, move this back to Firebase.
-      // But for Test Mode, this avoids any GCP billing/deployment issues instantly.
-      final keyId = 'rzp_test_SMPI0nhvKUesx3';
-      final keySecret = 'iYoPdfRRVgSbiBPF9rKa0gHC';
+      String? orderId;
 
-      final basicAuth = 'Basic ${base64Encode(utf8.encode('$keyId:$keySecret'))}';
-
-      final response = await http.post(
-        Uri.parse('https://api.razorpay.com/v1/orders'),
-        headers: <String, String>{
-          'authorization': basicAuth,
-          'Content-Type': 'application/json'
-        },
-        body: jsonEncode({
+      // 1. First attempt: Secure server-side order generation via Cloud Functions
+      try {
+        final callable = FirebaseFunctions.instance.httpsCallable(
+          'createRazorpayOrder',
+        );
+        final result = await callable.call(<String, dynamic>{
           'amount': (widget.amount * 100).toInt(),
-          'currency': 'INR',
-          'receipt': 'receipt_${DateTime.now().millisecondsSinceEpoch}',
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to create order: ${response.body}');
+        });
+        if (result.data != null && result.data['id'] != null) {
+          orderId = result.data['id'].toString();
+        }
+      } catch (cloudFnError) {
+        debugPrint(
+          'Cloud Function order creation unavailable: $cloudFnError. Falling back to test API.',
+        );
       }
 
-      final data = jsonDecode(response.body);
-      final String orderId = data['id'];
+      // 2. Fallback for offline/test mode using gitignored config
+      if (orderId == null) {
+        final basicAuth =
+            'Basic ${base64Encode(utf8.encode('$RAZORPAY_KEY_ID:$RAZORPAY_KEY_SECRET'))}';
 
-      // 2. Open Razorpay Check out
+        final response = await http.post(
+          Uri.parse('https://api.razorpay.com/v1/orders'),
+          headers: <String, String>{
+            'authorization': basicAuth,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'amount': (widget.amount * 100).toInt(),
+            'currency': 'INR',
+            'receipt': 'receipt_${DateTime.now().millisecondsSinceEpoch}',
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('Failed to create order: ${response.body}');
+        }
+
+        final data = jsonDecode(response.body);
+        orderId = data['id'];
+      }
+
+      // 3. Open Razorpay Checkout
       var options = {
-        'key': keyId,
+        'key': RAZORPAY_KEY_ID,
         'amount': (widget.amount * 100).toInt(),
         'name': 'AmpTrail',
         'order_id': orderId,
         'description': 'Booking for ${widget.stationName}',
         'timeout': 120, // in seconds
-        'theme': {
-          'color': '#00C853' // AppColors.primary equivalent in hex
-        }
+        'theme': {'color': '#00C853'},
       };
 
       _razorpay.open(options);
@@ -137,7 +159,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         title: Text(
           'Payment',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
         backgroundColor: AppColors.surface,
         elevation: 0,
@@ -191,14 +216,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         widget.stationName,
-                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -225,14 +256,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.primary,
-                    width: 2,
-                  ),
+                  border: Border.all(color: AppColors.primary, width: 2),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.security_rounded, color: AppColors.primary),
+                    const Icon(
+                      Icons.security_rounded,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -273,23 +304,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 4,
                   ),
-                  child: _isProcessing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Confirm & Pay',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                  child:
+                      _isProcessing
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.black,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : Text(
+                            'Confirm & Pay',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
                 ),
               ),
             ),

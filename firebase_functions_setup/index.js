@@ -11,9 +11,12 @@ admin.initializeApp();
 // 2. firebase functions:secrets:set RAZORPAY_KEY_SECRET
 // 3. And use process.env.RAZORPAY_KEY_ID and process.env.RAZORPAY_KEY_SECRET
 
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || (functions.config().razorpay ? functions.config().razorpay.key_id : "");
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || (functions.config().razorpay ? functions.config().razorpay.key_secret : "");
+
 const razorpay = new Razorpay({
-    key_id: "rzp_test_SMPI0nhvKUesx3", // Replace with Key ID or use process.env.RAZORPAY_KEY_ID
-    key_secret: "iYoPdfRRVgSbiBPF9rKa0gHC",  // Replace with Key Secret or use process.env.RAZORPAY_KEY_SECRET
+    key_id: RAZORPAY_KEY_ID,
+    key_secret: RAZORPAY_KEY_SECRET,
 });
 
 /**
@@ -22,10 +25,10 @@ const razorpay = new Razorpay({
  */
 exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
     try {
-        // 1. Validate user is authenticated (optional, depends on your app flow)
-        // if (!context.auth) {
-        //   throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated to make a payment.');
-        // }
+        // Enforce user authentication
+        if (!context.auth) {
+            throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated to create a payment order.');
+        }
 
         // 2. Safely get the amount (in paise, so rs 100 = 10000)
         const amount = data.amount;
@@ -64,7 +67,7 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = data;
 
         // Secret must match the generated signature
-        const secret = "YOUR_KEY_SECRET_HERE"; // Same Key Secret as above
+        const secret = RAZORPAY_KEY_SECRET;
 
         const hmac = crypto.createHmac("sha256", secret);
         hmac.update(razorpay_order_id + "|" + razorpay_payment_id);

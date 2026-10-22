@@ -44,5 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# API Keys
+# API Keys & Secrets
 lib/config/api_keys.dart
+.env
+.env.*
+*.pem
+service-account*.json
+firebase-debug*.log

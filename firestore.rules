@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ----------------------------------------------------
+    // HELPER FUNCTIONS
+    // ----------------------------------------------------
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.phone_number != null && 
+         exists(/databases/$(database)/documents/admins/$(request.auth.token.phone_number)))
+      );
+    }
+    
+    // ----------------------------------------------------
+    // STATIONS COLLECTION
+    // ----------------------------------------------------
+    // Public discovery: anyone can view EV stations
+    // Admin only: create, update, or remove charging stations
+    match /stations/{stationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // ----------------------------------------------------
+    // BOOKINGS COLLECTION
+    // ----------------------------------------------------
+    // Users can only view and create their own bookings
+    // Admins can view and manage all bookings
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.token.phone_number == resource.data.userPhone ||
+        isAdmin()
+      );
+      
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.userId ||
+        request.auth.token.phone_number == request.resource.data.userPhone
+      ) && request.resource.data.pricePerHr is number
+        && request.resource.data.hours is int
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice > 0;
+        
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.token.phone_number == resource.data.userPhone ||
+        isAdmin()
+      );
+      
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+    }
+    
+    // ----------------------------------------------------
+    // USERS COLLECTION
+    // ----------------------------------------------------
+    // Profile documents keyed by UID or phone number
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.token.phone_number == userId ||
+        isAdmin()
+      );
+    }
+    
+    // ----------------------------------------------------
+    // ADMINS COLLECTION
+    // ----------------------------------------------------
+    // Privileged role list: read allowed to verify permissions;
+    // Client write is strictly forbidden.
+    match /admins/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+  }
+}
