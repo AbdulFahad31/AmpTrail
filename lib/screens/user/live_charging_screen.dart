@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
@@ -55,7 +54,10 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   Text(
                     'Charging Session',
@@ -69,9 +71,9 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                 ],
               ),
             ),
-            
+
             const Spacer(),
-            
+
             // Charging Animation Layer
             FadeIn(
               child: Stack(
@@ -92,7 +94,7 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Progress Circle
                   SizedBox(
                     width: 200,
@@ -101,10 +103,12 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                       value: _chargePercentage / 100,
                       strokeWidth: 12,
                       backgroundColor: AppColors.surfaceLight,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
                     ),
                   ),
-                  
+
                   // Percentage Text
                   Column(
                     mainAxisSize: MainAxisSize.min,
@@ -130,24 +134,32 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 60),
-            
+
             // Session Stats
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                   _buildStat('Range Added', '${_addedRange.toStringAsFixed(0)} km', Icons.alt_route_rounded),
-                   _buildStat('Energy', '${_energyDelivered.toStringAsFixed(1)} kWh', Icons.bolt_rounded),
-                   _buildStat('Time Left', '45 min', Icons.timer_outlined),
+                  _buildStat(
+                    'Range Added',
+                    '${_addedRange.toStringAsFixed(0)} km',
+                    Icons.alt_route_rounded,
+                  ),
+                  _buildStat(
+                    'Energy',
+                    '${_energyDelivered.toStringAsFixed(1)} kWh',
+                    Icons.bolt_rounded,
+                  ),
+                  _buildStat('Time Left', '45 min', Icons.timer_outlined),
                 ],
               ),
             ),
-            
+
             const Spacer(),
-            
+
             // Station Info Card
             FadeInUp(
               child: Container(
@@ -166,7 +178,10 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.ev_station, color: AppColors.primary),
+                      child: const Icon(
+                        Icons.ev_station,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -195,7 +210,7 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                 ),
               ),
             ),
-            
+
             // Stop Button
             Padding(
               padding: const EdgeInsets.only(left: 24, right: 24, bottom: 40),
@@ -209,13 +224,19 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
                     foregroundColor: AppColors.error,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: AppColors.error, width: 1.5),
+                      side: const BorderSide(
+                        color: AppColors.error,
+                        width: 1.5,
+                      ),
                     ),
                     elevation: 0,
                   ),
                   child: Text(
                     'Stop Session',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -241,10 +262,7 @@ class _LiveChargingScreenState extends State<LiveChargingScreen> {
         ),
         Text(
           label,
-          style: GoogleFonts.outfit(
-            color: AppColors.textHint,
-            fontSize: 12,
-          ),
+          style: GoogleFonts.outfit(color: AppColors.textHint, fontSize: 12),
         ),
       ],
     );

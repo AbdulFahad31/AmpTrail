@@ -8,7 +8,8 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
 
-  bool get isDarkMode => _themeMode == ThemeMode.dark; // Corrected isDarkMode getter
+  bool get isDarkMode =>
+      _themeMode == ThemeMode.dark; // Corrected isDarkMode getter
 
   ThemeProvider();
 
@@ -40,7 +41,9 @@ class ThemeProvider extends ChangeNotifier {
       },
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: const Color(0xFF1E293B), // Dark background even in light mode for contrast
+      backgroundColor: const Color(
+        0xFF1E293B,
+      ), // Dark background even in light mode for contrast
       contentTextStyle: GoogleFonts.outfit(color: Colors.white),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Station {
@@ -50,7 +49,8 @@ class Station {
       address: json['address'] ?? '',
       latitude: (json['latitude'] ?? 0.0).toDouble(),
       longitude: (json['longitude'] ?? 0.0).toDouble(),
-      pricePerHr: (json['pricePerUnit'] ?? json['pricePerHr'] ?? 0.0).toDouble(),
+      pricePerHr:
+          (json['pricePerUnit'] ?? json['pricePerHr'] ?? 0.0).toDouble(),
       isAvailable: json['isAvailable'] ?? false,
       rating: (json['rating'] ?? 0.0).toDouble(),
       chargerType: json['chargerType']?.toString() ?? 'Type2',
@@ -62,7 +62,7 @@ class Station {
   factory Station.fromFirestore(DocumentSnapshot doc) {
     try {
       Map<String, dynamic> data = (doc.data() as Map<String, dynamic>?) ?? {};
-      
+
       double parseDouble(dynamic value, double defaultValue) {
         if (value == null) return defaultValue;
         if (value is double) return value;
@@ -84,7 +84,10 @@ class Station {
         address: data['address']?.toString() ?? '',
         latitude: parseDouble(data['latitude'], 0.0),
         longitude: parseDouble(data['longitude'], 0.0),
-        pricePerHr: parseDouble(data['pricePerUnit'] ?? data['pricePerHr'] ?? data['price'], 0.0),
+        pricePerHr: parseDouble(
+          data['pricePerUnit'] ?? data['pricePerHr'] ?? data['price'],
+          0.0,
+        ),
         isAvailable: parseBool(data['isAvailable'], true),
         rating: parseDouble(data['rating'], 0.0),
         chargerType: data['chargerType']?.toString() ?? 'Type2',

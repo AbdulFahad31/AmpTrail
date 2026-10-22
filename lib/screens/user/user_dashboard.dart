@@ -9,7 +9,6 @@ import 'package:amptrail_mini/screens/user/history_screen.dart';
 import 'package:amptrail_mini/screens/user/booking_confirmation_screen.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'dart:math' show cos, sqrt, asin;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -20,7 +19,7 @@ import 'package:amptrail_mini/services/favorites_service.dart';
 import 'package:amptrail_mini/services/station_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:amptrail_mini/config/api_keys.dart';
-
+import 'package:amptrail_mini/utils/geo_utils.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -40,7 +39,7 @@ class _UserDashboardState extends State<UserDashboard>
   int _selectedStationIndex = -1;
   late PageController _pageController;
   Uint8List? _cachedMarkerImage; // Performance Cache
-  
+
   // Search related
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> _searchResults = [];
@@ -52,7 +51,7 @@ class _UserDashboardState extends State<UserDashboard>
   List<String> _favoriteStationIds = [];
   bool _isLoadingStations = true;
   String? _errorMessage;
-  
+
   // Filter state
   String _filterType = 'all'; // all, available, favorites
 
@@ -78,7 +77,9 @@ class _UserDashboardState extends State<UserDashboard>
   Future<void> _fetchStations({bool forceRefresh = false}) async {
     setState(() => _isLoadingStations = true);
     try {
-      final stations = await _stationService.getStations(forceRefresh: forceRefresh);
+      final stations = await _stationService.getStations(
+        forceRefresh: forceRefresh,
+      );
       if (mounted) {
         setState(() {
           _allStations = stations;
@@ -92,7 +93,7 @@ class _UserDashboardState extends State<UserDashboard>
           _isLoadingStations = false;
           _errorMessage = e.toString();
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -101,7 +102,7 @@ class _UserDashboardState extends State<UserDashboard>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Network error. Showing cached stations offline.', 
+                    'Network error. Showing cached stations offline.',
                     style: GoogleFonts.outfit(color: Colors.white),
                   ),
                 ),
@@ -110,13 +111,15 @@ class _UserDashboardState extends State<UserDashboard>
             backgroundColor: AppColors.surface,
             duration: const Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     }
   }
-  
+
   @override
   void dispose() {
     _navAnimController.dispose();
@@ -153,11 +156,14 @@ class _UserDashboardState extends State<UserDashboard>
     if (_filterType == 'available') {
       filtered = _allStations.where((s) => s.isAvailable).toList();
     } else if (_filterType == 'favorites') {
-      filtered = _allStations.where((s) => _favoriteStationIds.contains(s.id)).toList();
+      filtered =
+          _allStations
+              .where((s) => _favoriteStationIds.contains(s.id))
+              .toList();
     }
     // Single setState — caller already wraps us
     _stations = filtered;
-    
+
     // Refresh markers on map
     _addStationMarkers();
 
@@ -185,7 +191,8 @@ class _UserDashboardState extends State<UserDashboard>
 
   Future<void> _performPlaceSearch(String query) async {
     final token = MAPBOX_TOKEN;
-    final url = "https://api.mapbox.com/geocoding/v5/mapbox.places/$query.json?access_token=$token&limit=5&country=IN";
+    final url =
+        "https://api.mapbox.com/geocoding/v5/mapbox.places/$query.json?access_token=$token&limit=5&country=IN";
 
     try {
       setState(() => _isSearching = true);
@@ -206,7 +213,7 @@ class _UserDashboardState extends State<UserDashboard>
   void _selectSearchResult(dynamic feature) {
     final coords = feature['geometry']['coordinates'];
     final name = feature['text'];
-    
+
     _searchController.text = name;
     setState(() {
       _searchResults = [];
@@ -218,25 +225,45 @@ class _UserDashboardState extends State<UserDashboard>
     double searchLat = coords[1];
 
     _allStations.sort((a, b) {
-      double distA = _calculateDistance(searchLat, searchLon, a.latitude, a.longitude);
-      double distB = _calculateDistance(searchLat, searchLon, b.latitude, b.longitude);
+      double distA = _calculateDistance(
+        searchLat,
+        searchLon,
+        a.latitude,
+        a.longitude,
+      );
+      double distB = _calculateDistance(
+        searchLat,
+        searchLon,
+        b.latitude,
+        b.longitude,
+      );
       return distA.compareTo(distB);
     });
-    
+
     _applyFilter();
 
     if (_stations.isNotEmpty) {
-      double closestDist = _calculateDistance(searchLat, searchLon, _stations.first.latitude, _stations.first.longitude);
+      double closestDist = _calculateDistance(
+        searchLat,
+        searchLon,
+        _stations.first.latitude,
+        _stations.first.longitude,
+      );
       if (closestDist > 100) {
         Future.delayed(const Duration(milliseconds: 500), () {
           _mapboxMap?.flyTo(
-            CameraOptions(center: Point(coordinates: Position(searchLon, searchLat)), zoom: 11.0),
+            CameraOptions(
+              center: Point(coordinates: Position(searchLon, searchLat)),
+              zoom: 11.0,
+            ),
             MapAnimationOptions(duration: 1500),
           );
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("No stations found nearby. Showing closest available instead."),
+            content: Text(
+              "No stations found nearby. Showing closest available instead.",
+            ),
             backgroundColor: Colors.orange,
           ),
         );
@@ -254,12 +281,11 @@ class _UserDashboardState extends State<UserDashboard>
 
   Future<void> _initializeLocation() async {
     if (_isLoadingLocation) return;
-    
+
     if (!mounted) return;
     setState(() {
       _isLoadingLocation = true;
     });
-
 
     try {
       // Check if location services are enabled
@@ -273,7 +299,8 @@ class _UserDashboardState extends State<UserDashboard>
       }
 
       // Check and request permission
-      geo.LocationPermission permission = await geo.Geolocator.checkPermission();
+      geo.LocationPermission permission =
+          await geo.Geolocator.checkPermission();
       if (permission == geo.LocationPermission.denied) {
         permission = await geo.Geolocator.requestPermission();
         if (permission == geo.LocationPermission.denied) {
@@ -298,13 +325,13 @@ class _UserDashboardState extends State<UserDashboard>
         desiredAccuracy: geo.LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
       );
-      
+
       if (mounted) {
         setState(() {
           _currentPosition = position;
           _isLoadingLocation = false;
         });
-        
+
         // Show success feedback (get messenger after await, inside mounted check)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -318,15 +345,19 @@ class _UserDashboardState extends State<UserDashboard>
             backgroundColor: AppColors.surface,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
-        
+
         // Fly to location if map is ready
         if (_mapboxMap != null) {
           _mapboxMap?.flyTo(
             CameraOptions(
-              center: Point(coordinates: Position(position.longitude, position.latitude)),
+              center: Point(
+                coordinates: Position(position.longitude, position.latitude),
+              ),
               zoom: 15.0,
             ),
             MapAnimationOptions(duration: 1500, startDelay: 0),
@@ -353,13 +384,18 @@ class _UserDashboardState extends State<UserDashboard>
               children: [
                 const Icon(Icons.error_outline, color: AppColors.error),
                 const SizedBox(width: 8),
-                Text('Could not get location. Try again.', style: GoogleFonts.outfit()),
+                Text(
+                  'Could not get location. Try again.',
+                  style: GoogleFonts.outfit(),
+                ),
               ],
             ),
             backgroundColor: AppColors.surface,
             duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -375,14 +411,11 @@ class _UserDashboardState extends State<UserDashboard>
   void _onMapCreated(MapboxMap mapboxMap) {
     debugPrint('Mapbox: Map successfully created');
     _mapboxMap = mapboxMap;
-    
+
     // Configure location puck safely
     try {
       _mapboxMap?.location.updateSettings(
-         LocationComponentSettings(
-           enabled: true,
-           pulsingEnabled: true,
-         )
+        LocationComponentSettings(enabled: true, pulsingEnabled: true),
       );
     } catch (e) {
       debugPrint('Mapbox: Error setting location component: $e');
@@ -397,7 +430,12 @@ class _UserDashboardState extends State<UserDashboard>
     if (_currentPosition != null) {
       _mapboxMap?.setCamera(
         CameraOptions(
-          center: Point(coordinates: Position(_currentPosition!.longitude, _currentPosition!.latitude)),
+          center: Point(
+            coordinates: Position(
+              _currentPosition!.longitude,
+              _currentPosition!.latitude,
+            ),
+          ),
           zoom: 14.0,
         ),
       );
@@ -406,16 +444,17 @@ class _UserDashboardState extends State<UserDashboard>
 
   Future<Uint8List> _createCustomMarker() async {
     if (_cachedMarkerImage != null) return _cachedMarkerImage!;
-    
+
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     const double width = 64.0;
     const double height = 150.0; // Mid is 75, so tip is at EXACT center
-    
-    final Paint pinPaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-    
+
+    final Paint pinPaint =
+        Paint()
+          ..color = AppColors.primary
+          ..style = PaintingStyle.fill;
+
     // Draw Map Pin Path
     final Path pinPath = Path();
     pinPath.moveTo(32, 75); // Tip of pin exactly in middle of image bounds
@@ -430,7 +469,7 @@ class _UserDashboardState extends State<UserDashboard>
 
     // Soft drop shadow
     canvas.drawShadow(pinPath, Colors.black, 6.0, false);
-    
+
     // Fill pin
     canvas.drawPath(pinPath, pinPaint);
 
@@ -439,7 +478,9 @@ class _UserDashboardState extends State<UserDashboard>
     canvas.drawCircle(const Offset(32, 32), 20, whitePaint);
 
     // EV Station Icon inside the white circle
-    final TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
+    final TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
     textPainter.text = TextSpan(
       text: String.fromCharCode(Icons.ev_station.codePoint),
       style: TextStyle(
@@ -451,44 +492,48 @@ class _UserDashboardState extends State<UserDashboard>
       ),
     );
     textPainter.layout();
-    
+
     final double iconX = 32 - (textPainter.width / 2);
     final double iconY = 32 - (textPainter.height / 2);
     textPainter.paint(canvas, Offset(iconX, iconY));
 
     final ui.Picture picture = pictureRecorder.endRecording();
     final ui.Image image = await picture.toImage(width.toInt(), height.toInt());
-    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     _cachedMarkerImage = byteData!.buffer.asUint8List();
     return _cachedMarkerImage!;
   }
 
   Future<void> _addStationMarkers() async {
     if (_pointAnnotationManager == null || _stations.isEmpty) return;
-    
+
     try {
       await _pointAnnotationManager?.deleteAll();
-      
+
       final Uint8List markerImage = await _createCustomMarker();
-      
+
       List<PointAnnotationOptions> options = [];
       for (var station in _stations) {
         options.add(
           PointAnnotationOptions(
-            geometry: Point(coordinates: Position(station.longitude, station.latitude)),
-            image: markerImage, 
+            geometry: Point(
+              coordinates: Position(station.longitude, station.latitude),
+            ),
+            image: markerImage,
             textField: station.name,
             textOffset: [0.0, 1.2], // Perfect gap underneath the tip
             textAnchor: TextAnchor.TOP,
             textSize: 12.0,
             textColor: Colors.white.value,
             textHaloColor: AppColors.background.value, // Dark background shadow
-  
+
             textHaloWidth: 1.5,
           ),
         );
       }
-      
+
       await _pointAnnotationManager?.createMulti(options);
       debugPrint("Mapbox: Added ${options.length} markers to map");
     } catch (e) {
@@ -498,17 +543,19 @@ class _UserDashboardState extends State<UserDashboard>
 
   void _onStationSelected(int index) {
     if (index < 0 || index >= _stations.length) return;
-    
+
     setState(() {
       _selectedStationIndex = index;
     });
-    
+
     final station = _stations[index];
-    
+
     _mapboxMap?.flyTo(
       CameraOptions(
-         center: Point(coordinates: Position(station.longitude, station.latitude)),
-         zoom: 15.0,
+        center: Point(
+          coordinates: Position(station.longitude, station.latitude),
+        ),
+        zoom: 15.0,
       ),
       MapAnimationOptions(duration: 1000),
     );
@@ -519,131 +566,175 @@ class _UserDashboardState extends State<UserDashboard>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.location_off, color: AppColors.error, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Location Services Off',
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.location_off,
+                  color: AppColors.error,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Location Services Off',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Please enable location services to see nearby charging stations on the map.',
               style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+                color: AppColors.textSecondary,
+                height: 1.5,
               ),
             ),
-          ],
-        ),
-        content: Text(
-          'Please enable location services to see nearby charging stations on the map.',
-          style: GoogleFonts.outfit(color: AppColors.textSecondary, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await geo.Geolocator.openLocationSettings();
+                  _initializeLocation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.background,
+                ),
+                child: Text(
+                  'Open Settings',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await geo.Geolocator.openLocationSettings();
-              _initializeLocation();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.background,
-            ),
-            child: Text('Open Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
     );
   }
 
   void _showPermissionDeniedDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.location_disabled, color: AppColors.warning, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Location Permission',
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.location_disabled,
+                  color: AppColors.warning,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Location Permission',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Location permission is required to find nearby charging stations and calculate distances.',
               style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+                height: 1.5,
               ),
             ),
-          ],
-        ),
-        content: Text(
-          'Location permission is required to find nearby charging stations and calculate distances.',
-          style: GoogleFonts.outfit(color: AppColors.textSecondary, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _initializeLocation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.background,
+                ),
+                child: Text(
+                  'Allow',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _initializeLocation();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.background,
-            ),
-            child: Text('Allow', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
     );
   }
 
   void _showPermissionDeniedForeverDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Permission Required',
-          style: GoogleFonts.outfit(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Location permission is permanently denied. Please enable it in app settings.',
-          style: GoogleFonts.outfit(color: AppColors.textSecondary, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await geo.Geolocator.openAppSettings();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.background,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('Open Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            title: Text(
+              'Permission Required',
+              style: GoogleFonts.outfit(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              'Location permission is permanently denied. Please enable it in app settings.',
+              style: GoogleFonts.outfit(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await geo.Geolocator.openAppSettings();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.background,
+                ),
+                child: Text(
+                  'Open Settings',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
-  
+
   void _onItemTapped(int index) {
     if (_isNavigating || _currentIndex == index) return;
     HapticFeedback.selectionClick();
@@ -652,7 +743,7 @@ class _UserDashboardState extends State<UserDashboard>
       _currentIndex = index;
     });
   }
-  
+
   void _navigateToBookingConfirmation(Station station) async {
     if (_isNavigating) return;
     setState(() {
@@ -700,9 +791,15 @@ class _UserDashboardState extends State<UserDashboard>
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: const Border(top: BorderSide(color: AppColors.surfaceLight, width: 0.5)),
+        border: const Border(
+          top: BorderSide(color: AppColors.surfaceLight, width: 0.5),
+        ),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, -4)),
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 12,
+            offset: Offset(0, -4),
+          ),
         ],
       ),
       padding: EdgeInsets.only(
@@ -713,8 +810,18 @@ class _UserDashboardState extends State<UserDashboard>
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(Icons.map_rounded, 'Map', _currentIndex == 0, 0),
-          _buildNavItem(Icons.history_rounded, 'History', _currentIndex == 1, 1),
-          _buildNavItem(Icons.person_outline_rounded, 'Profile', _currentIndex == 2, 2),
+          _buildNavItem(
+            Icons.history_rounded,
+            'History',
+            _currentIndex == 1,
+            1,
+          ),
+          _buildNavItem(
+            Icons.person_outline_rounded,
+            'Profile',
+            _currentIndex == 2,
+            2,
+          ),
         ],
       ),
     );
@@ -722,7 +829,10 @@ class _UserDashboardState extends State<UserDashboard>
 
   Widget _buildMapScreen() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mapStyle = isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12";
+    final mapStyle =
+        isDark
+            ? "mapbox://styles/mapbox/dark-v11"
+            : "mapbox://styles/mapbox/streets-v12";
 
     return Stack(
       children: [
@@ -734,16 +844,14 @@ class _UserDashboardState extends State<UserDashboard>
               center: Point(coordinates: Position(77.5946, 12.9716)),
               zoom: 12.0,
             ),
-            styleUri: isDark
-                ? 'mapbox://styles/mapbox/dark-v11'
-                : 'mapbox://styles/mapbox/streets-v12',
+            styleUri: mapStyle,
             textureView: true,
             onMapCreated: _onMapCreated,
           ),
         ),
 
         // Removed Manual Style Switcher in favor of global theme
-        
+
         // Search Bar (Back at Top)
         Positioned(
           top: MediaQuery.of(context).padding.top + 10,
@@ -759,25 +867,46 @@ class _UserDashboardState extends State<UserDashboard>
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.surfaceLight),
                     boxShadow: const [
-                      BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 22),
+                      const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.textSecondary,
+                        size: 22,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          style: GoogleFonts.outfit(color: AppColors.textPrimary),
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textPrimary,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Search charging stations...',
-                            hintStyle: GoogleFonts.outfit(color: AppColors.textHint),
+                            hintStyle: GoogleFonts.outfit(
+                              color: AppColors.textHint,
+                            ),
                             border: InputBorder.none,
                           ),
                           onChanged: _onSearchChanged,
                         ),
                       ),
+                      if (_isSearching)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -790,7 +919,11 @@ class _UserDashboardState extends State<UserDashboard>
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
-                      BoxShadow(color: Colors.black45, blurRadius: 15, offset: Offset(0, 8)),
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 15,
+                        offset: Offset(0, 8),
+                      ),
                     ],
                   ),
                   child: MediaQuery.removePadding(
@@ -799,19 +932,29 @@ class _UserDashboardState extends State<UserDashboard>
                     child: ListView.builder(
                       padding: EdgeInsets.zero,
                       shrinkWrap: true,
-                      itemCount: _searchResults.length > 3 ? 3 : _searchResults.length,
+                      itemCount:
+                          _searchResults.length > 3 ? 3 : _searchResults.length,
                       itemBuilder: (context, index) {
                         final feature = _searchResults[index];
                         return ListTile(
-                          leading: const Icon(Icons.place_outlined, color: AppColors.primary),
-                          title: Text(feature['place_name'], style: const TextStyle(color: Colors.white, fontSize: 13)),
+                          leading: const Icon(
+                            Icons.place_outlined,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            feature['place_name'],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
                           onTap: () => _selectSearchResult(feature),
                         );
                       },
                     ),
                   ),
                 ),
-              
+
               // Filter Chips
               const SizedBox(height: 12),
               SizedBox(
@@ -821,15 +964,27 @@ class _UserDashboardState extends State<UserDashboard>
                   children: [
                     GestureDetector(
                       onTap: () => _onFilterChanged('all'),
-                      child: _buildFilterChip('All', Icons.apps_rounded, _filterType == 'all'),
+                      child: _buildFilterChip(
+                        'All',
+                        Icons.apps_rounded,
+                        _filterType == 'all',
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => _onFilterChanged('available'),
-                      child: _buildFilterChip('Available', Icons.check_circle_rounded, _filterType == 'available'),
+                      child: _buildFilterChip(
+                        'Available',
+                        Icons.check_circle_rounded,
+                        _filterType == 'available',
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => _onFilterChanged('favorites'),
-                      child: _buildFilterChip('Favorites', Icons.favorite_rounded, _filterType == 'favorites'),
+                      child: _buildFilterChip(
+                        'Favorites',
+                        Icons.favorite_rounded,
+                        _filterType == 'favorites',
+                      ),
                     ),
                   ],
                 ),
@@ -840,7 +995,7 @@ class _UserDashboardState extends State<UserDashboard>
 
         // Map Actions Column
         Positioned(
-          bottom: _stations.isNotEmpty ? 240 : 20, 
+          bottom: _stations.isNotEmpty ? 240 : 20,
           right: 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -853,7 +1008,10 @@ class _UserDashboardState extends State<UserDashboard>
                 onPressed: () {
                   _fetchStations(forceRefresh: true);
                 },
-                child: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+                child: const Icon(
+                  Icons.refresh_rounded,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 12),
               FloatingActionButton(
@@ -862,21 +1020,27 @@ class _UserDashboardState extends State<UserDashboard>
                 backgroundColor: AppColors.surface,
                 elevation: 4,
                 onPressed: _isLoadingLocation ? null : _initializeLocation,
-                child: _isLoadingLocation
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                child:
+                    _isLoadingLocation
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                          ),
+                        )
+                        : const Icon(
+                          Icons.my_location,
+                          color: AppColors.primary,
                         ),
-                      )
-                    : const Icon(Icons.my_location, color: AppColors.primary),
               ),
             ],
           ),
         ),
-        
+
         if (_isLoadingStations)
           Positioned(
             bottom: 20,
@@ -921,10 +1085,7 @@ class _UserDashboardState extends State<UserDashboard>
                       value = (_pageController.page! - index).abs();
                       value = (1 - (value * 0.08)).clamp(0.92, 1.0);
                     }
-                    return Transform.scale(
-                      scale: value,
-                      child: child,
-                    );
+                    return Transform.scale(scale: value, child: child);
                   },
                   child: Material(
                     color: Colors.transparent,
@@ -940,7 +1101,10 @@ class _UserDashboardState extends State<UserDashboard>
                           curve: Curves.easeOutCubic,
                         );
                       },
-                      child: _buildStationCard(station),
+                      child: _buildStationCard(
+                        station,
+                        isSelected: index == _selectedStationIndex,
+                      ),
                     ),
                   ),
                 );
@@ -954,7 +1118,10 @@ class _UserDashboardState extends State<UserDashboard>
             right: 20,
             child: FadeInUp(
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(16),
@@ -963,10 +1130,16 @@ class _UserDashboardState extends State<UserDashboard>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.info_outline, color: AppColors.primary, size: 32),
+                    const Icon(
+                      Icons.info_outline,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
                     const SizedBox(height: 12),
                     Text(
-                      _errorMessage != null ? 'Error: $_errorMessage' : 'No stations found',
+                      _errorMessage != null
+                          ? 'Error: $_errorMessage'
+                          : 'No stations found',
                       style: GoogleFonts.outfit(
                         color: AppColors.textPrimary,
                         fontSize: 14,
@@ -976,9 +1149,9 @@ class _UserDashboardState extends State<UserDashboard>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _errorMessage != null 
-                        ? 'Ensure your Firebase Rules allow reading or check your connection.'
-                        : 'Try changing your filters or search area',
+                      _errorMessage != null
+                          ? 'Ensure your Firebase Rules allow reading or check your connection.'
+                          : 'Try changing your filters or search area',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         color: AppColors.textSecondary,
@@ -990,7 +1163,6 @@ class _UserDashboardState extends State<UserDashboard>
               ),
             ),
           ),
-        
       ],
     );
   }
@@ -1008,14 +1180,31 @@ class _UserDashboardState extends State<UserDashboard>
           color: isActive ? AppColors.primary : AppColors.surfaceLight,
           width: isActive ? 1.5 : 1,
         ),
-        boxShadow: isActive
-            ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))]
-            : const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        boxShadow:
+            isActive
+                ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+                : const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: isActive ? AppColors.background : AppColors.textSecondary, size: 15),
+          Icon(
+            icon,
+            color: isActive ? AppColors.background : AppColors.textSecondary,
+            size: 15,
+          ),
           const SizedBox(width: 6),
           Text(
             label,
@@ -1030,8 +1219,7 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-
-  Widget _buildStationCard(Station station) {
+  Widget _buildStationCard(Station station, {bool isSelected = false}) {
     String? distanceText;
     if (_currentPosition != null) {
       final distance = _calculateDistance(
@@ -1049,14 +1237,17 @@ class _UserDashboardState extends State<UserDashboard>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.surfaceLight.withOpacity(0.5)),
+        border: Border.all(
+          color:
+              isSelected
+                  ? AppColors.primary
+                  : AppColors.surfaceLight.withOpacity(0.5),
+          width: isSelected ? 1.5 : 1.0,
+        ),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.surface,
-            AppColors.surface.withOpacity(0.8),
-          ],
+          colors: [AppColors.surface, AppColors.surface.withOpacity(0.8)],
         ),
         boxShadow: [
           BoxShadow(
@@ -1090,7 +1281,9 @@ class _UserDashboardState extends State<UserDashboard>
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        _buildConnectorTag(station.id.hashCode % 2 == 0 ? 'CCS2' : 'Type 2'),
+                        _buildConnectorTag(
+                          station.id.hashCode % 2 == 0 ? 'CCS2' : 'Type 2',
+                        ),
                         const SizedBox(width: 6),
                         _buildConnectorTag('22 kW', isPower: true),
                       ],
@@ -1101,8 +1294,13 @@ class _UserDashboardState extends State<UserDashboard>
               IconButton(
                 onPressed: () => _toggleFavorite(station.id),
                 icon: Icon(
-                  _favoriteStationIds.contains(station.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: _favoriteStationIds.contains(station.id) ? AppColors.error : AppColors.textSecondary,
+                  _favoriteStationIds.contains(station.id)
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color:
+                      _favoriteStationIds.contains(station.id)
+                          ? AppColors.error
+                          : AppColors.textSecondary,
                   size: 22,
                 ),
                 padding: EdgeInsets.zero,
@@ -1112,14 +1310,20 @@ class _UserDashboardState extends State<UserDashboard>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: station.isAvailable ? AppColors.success.withOpacity(0.12) : AppColors.error.withOpacity(0.12),
+                  color:
+                      station.isAvailable
+                          ? AppColors.success.withOpacity(0.12)
+                          : AppColors.error.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   station.isAvailable ? 'Available' : 'Busy',
                   style: GoogleFonts.outfit(
                     fontSize: 11,
-                    color: station.isAvailable ? AppColors.success : AppColors.error,
+                    color:
+                        station.isAvailable
+                            ? AppColors.success
+                            : AppColors.error,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1134,25 +1338,42 @@ class _UserDashboardState extends State<UserDashboard>
               Text(
                 station.rating.toString(),
                 style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary, 
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.timer_outlined, color: AppColors.textSecondary, size: 14),
+              const Icon(
+                Icons.timer_outlined,
+                color: AppColors.textSecondary,
+                size: 14,
+              ),
               const SizedBox(width: 4),
               Text(
                 '12 min', // Estimated time
-                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13),
+                style: GoogleFonts.outfit(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               if (distanceText != null) ...[
                 const SizedBox(width: 12),
-                const Icon(Icons.location_on_rounded, color: AppColors.textSecondary, size: 14),
+                const Icon(
+                  Icons.location_on_rounded,
+                  color: AppColors.textSecondary,
+                  size: 14,
+                ),
                 const SizedBox(width: 4),
-                Text(
-                  distanceText,
-                  style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13),
+                Flexible(
+                  child: Text(
+                    distanceText,
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ],
@@ -1176,11 +1397,18 @@ class _UserDashboardState extends State<UserDashboard>
                 children: [
                   Text(
                     'Price',
-                    style: GoogleFonts.outfit(color: AppColors.textHint, fontSize: 11),
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textHint,
+                      fontSize: 11,
+                    ),
                   ),
                   Text(
                     '₹${station.pricePerHr}/hr',
-                    style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -1188,35 +1416,52 @@ class _UserDashboardState extends State<UserDashboard>
               // Directions Button
               IconButton(
                 onPressed: () => _openDirections(station),
-                icon: const Icon(Icons.directions_rounded, color: AppColors.primary),
+                icon: const Icon(
+                  Icons.directions_rounded,
+                  color: AppColors.primary,
+                ),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.primary.withOpacity(0.1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               // Book Now Button
               Expanded(
                 child: ElevatedButton(
-                  onPressed: station.isAvailable ? () => _navigateToBookingConfirmation(station) : null,
+                  onPressed:
+                      station.isAvailable
+                          ? () => _navigateToBookingConfirmation(station)
+                          : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.background,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: Text('Book', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Book',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
   void _openDirections(Station station) async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}';
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}';
     try {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -1232,10 +1477,16 @@ class _UserDashboardState extends State<UserDashboard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isPower ? AppColors.accent.withOpacity(0.1) : AppColors.surfaceLight,
+        color:
+            isPower
+                ? AppColors.accent.withOpacity(0.1)
+                : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isPower ? AppColors.accent.withOpacity(0.2) : AppColors.surfaceLight.withOpacity(0.5),
+          color:
+              isPower
+                  ? AppColors.accent.withOpacity(0.2)
+                  : AppColors.surfaceLight.withOpacity(0.5),
         ),
       ),
       child: Text(
@@ -1249,18 +1500,17 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const p = 0.017453292519943295;
-    final a = 0.5 - cos((lat2 - lat1) * p) / 2 +
-        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a));
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    return GeoUtils.calculateDistanceKm(lat1, lon1, lat2, lon2);
   }
 
   String _formatDistance(double km) {
-    if (km < 1) {
-      return '${(km * 1000).toStringAsFixed(0)} m';
-    }
-    return '${km.toStringAsFixed(1)} km';
+    return GeoUtils.formatDistance(km);
   }
 
   Widget _buildNavItem(IconData icon, String label, bool isActive, int index) {
@@ -1268,12 +1518,13 @@ class _UserDashboardState extends State<UserDashboard>
       onTap: () => _onItemTapped(index),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        decoration: isActive
-            ? BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
+        decoration:
+            isActive
+                ? BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                )
+                : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

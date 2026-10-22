@@ -74,43 +74,56 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         smsCode: otp,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       debugPrint("DEBUG: Auth Successful: ${userCredential.user?.uid}");
-      
+
       // 2. Fire and forget Firestore save - do NOT await it
       // This prevents Permission Denied errors from hanging the UI
-      FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'stations31')
+      FirebaseFirestore.instanceFor(
+            app: Firebase.app(),
+            databaseId: 'stations31',
+          )
           .collection('users')
           .doc(userCredential.user?.phoneNumber)
           .set({
-        'phone': userCredential.user?.phoneNumber,
-        'lastLogin': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)).catchError((e) {
-        debugPrint("DEBUG: Background Firestore Error (ignored): $e");
-      });
+            'phone': userCredential.user?.phoneNumber,
+            'lastLogin': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .catchError((e) {
+            debugPrint("DEBUG: Background Firestore Error (ignored): $e");
+          });
 
       if (!mounted) return;
-      
+
       // Haptic feedback for successful verification
       HapticFeedback.mediumImpact();
-      
+
       setState(() => _isLoading = false);
 
       // 3. Forced Navigation with Smooth Transition
       debugPrint("DEBUG: Navigating to Dashboard...");
-      
+
       // Close keyboard before navigating for a smoother look
       FocusScope.of(context).unfocus();
-      
+
       // Give a tiny moment for keyboard and state to settle
       Future.delayed(const Duration(milliseconds: 300), () {
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const UserDashboard(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            pageBuilder:
+                (context, animation, secondaryAnimation) =>
+                    const UserDashboard(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
               return FadeTransition(opacity: animation, child: child);
             },
             transitionDuration: const Duration(milliseconds: 500),
@@ -118,7 +131,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           (route) => false,
         );
       });
-
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -151,7 +163,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         backgroundColor: Colors.transparent,
@@ -188,7 +203,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 48),
-              
+
               FadeInUp(
                 child: PinCodeTextField(
                   appContext: context,
@@ -222,30 +237,31 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
 
               const SizedBox(height: 32),
-              
+
               FadeInUp(
                 delay: const Duration(milliseconds: 200),
                 child: Center(
-                  child: _secondsRemaining > 0
-                      ? Text(
-                          'Resend code in ${_secondsRemaining ~/ 60}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}',
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: () {
-                            _startTimer();
-                          },
-                          child: Text(
-                            'Resend Code',
+                  child:
+                      _secondsRemaining > 0
+                          ? Text(
+                            'Resend code in ${_secondsRemaining ~/ 60}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}',
                             style: GoogleFonts.outfit(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          )
+                          : TextButton(
+                            onPressed: () {
+                              _startTimer();
+                            },
+                            child: Text(
+                              'Resend Code',
+                              style: GoogleFonts.outfit(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
                 ),
               ),
 
@@ -263,20 +279,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Verify',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.background,
+                  child:
+                      _isLoading
+                          ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: AppColors.background,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : Text(
+                            'Verify',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.background,
+                            ),
                           ),
-                        ),
                 ),
               ),
             ],

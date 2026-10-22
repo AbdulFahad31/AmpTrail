@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:amptrail_mini/utils/theme_provider.dart';
 import 'package:amptrail_mini/constants/colors.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -16,7 +14,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     // Determine colors based on theme
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
     final textColor = Theme.of(context).colorScheme.onSurface;
@@ -70,7 +67,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(
                       'Get updates on your booking status',
                       style: GoogleFonts.outfit(
-                        color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
+                        color:
+                            Theme.of(context).textTheme.bodySmall?.color ??
+                            Colors.grey,
                         fontSize: 12,
                       ),
                     ),

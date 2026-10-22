@@ -13,7 +13,7 @@ class FavoritesService {
   static Future<bool> addFavorite(String stationId) async {
     final prefs = await SharedPreferences.getInstance();
     final favorites = await getFavorites();
-    
+
     if (!favorites.contains(stationId)) {
       favorites.add(stationId);
       return await prefs.setStringList(_favoritesKey, favorites);
@@ -25,7 +25,7 @@ class FavoritesService {
   static Future<bool> removeFavorite(String stationId) async {
     final prefs = await SharedPreferences.getInstance();
     final favorites = await getFavorites();
-    
+
     favorites.remove(stationId);
     return await prefs.setStringList(_favoritesKey, favorites);
   }

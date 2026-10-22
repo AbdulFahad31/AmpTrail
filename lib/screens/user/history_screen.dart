@@ -38,32 +38,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _deleteBooking(String bookingId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Delete Record?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
-        content: Text(
-          'Are you sure you want to remove this booking from your history? This action cannot be undone.',
-          style: GoogleFonts.outfit(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('Delete', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+            title: Text(
+              'Delete Record?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            content: Text(
+              'Are you sure you want to remove this booking from your history? This action cannot be undone.',
+              style: GoogleFonts.outfit(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Delete',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -73,9 +90,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_outline, color: AppColors.primary, size: 20),
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
-                Text('Booking removed from history', style: GoogleFonts.outfit(color: Colors.white)),
+                Text(
+                  'Booking removed from history',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
               ],
             ),
             backgroundColor: AppColors.surfaceLight,
@@ -89,32 +113,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _cancelBooking(String bookingId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Cancel Booking?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
-        content: Text(
-          'Are you sure you want to cancel this booking?',
-          style: GoogleFonts.outfit(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('No', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('Yes, Cancel', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+            title: Text(
+              'Cancel Booking?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            content: Text(
+              'Are you sure you want to cancel this booking?',
+              style: GoogleFonts.outfit(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'No',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Yes, Cancel',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -124,9 +165,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_outline, color: AppColors.error, size: 20),
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.error,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
-                Text('Booking cancelled', style: GoogleFonts.outfit(color: Colors.white)),
+                Text(
+                  'Booking cancelled',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
               ],
             ),
             backgroundColor: AppColors.surfaceLight,
@@ -152,7 +200,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  String _getStatusText(BookingStatus status, DateTime bookingDate, String timeSlot) {
+  String _getStatusText(
+    BookingStatus status,
+    DateTime bookingDate,
+    String timeSlot,
+  ) {
     if (status == BookingStatus.accepted) {
       try {
         final timeParts = timeSlot.split(' - ');
@@ -214,13 +266,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   String _getTimeToStart(Booking booking) {
-    final scheduledTime = _getScheduledDateTime(booking.bookingDate, booking.timeSlot);
+    final scheduledTime = _getScheduledDateTime(
+      booking.bookingDate,
+      booking.timeSlot,
+    );
     if (scheduledTime == null) return "";
-    
+
     final now = DateTime.now();
     if (scheduledTime.isAfter(now)) {
       final diff = scheduledTime.difference(now);
-      
+
       if (diff.inDays > 0) {
         return "${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} left";
       } else if (diff.inHours > 0) {
@@ -279,60 +334,64 @@ class _HistoryScreenState extends State<HistoryScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0,
       ),
-      body: identifier == null && uid == null
-          ? _buildLoginPrompt()
-          : StreamBuilder<List<Booking>>(
-              stream: _stationService.getBookingsStream(identifier ?? 'unknown', userId: uid),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+      body:
+          identifier == null && uid == null
+              ? _buildLoginPrompt()
+              : StreamBuilder<List<Booking>>(
+                stream: _stationService.getBookingsStream(
+                  identifier ?? 'unknown',
+                  userId: uid,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: 4,
+                      itemBuilder: (context, index) {
+                        return Shimmer.fromColors(
+                          baseColor: AppColors.surfaceLight,
+                          highlightColor: AppColors.surface,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 20),
+                            height: 180,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading bookings',
+                        style: GoogleFonts.outfit(color: AppColors.error),
+                      ),
+                    );
+                  }
+
+                  final bookings = snapshot.data ?? [];
+
+                  if (bookings.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: 4,
+                    itemCount: bookings.length,
                     itemBuilder: (context, index) {
-                      return Shimmer.fromColors(
-                        baseColor: AppColors.surfaceLight,
-                        highlightColor: AppColors.surface,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          height: 180,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
+                      final booking = bookings[index];
+                      return FadeInUp(
+                        delay: Duration(milliseconds: index * 100),
+                        child: _buildBookingCard(booking),
                       );
                     },
                   );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error loading bookings',
-                      style: GoogleFonts.outfit(color: AppColors.error),
-                    ),
-                  );
-                }
-
-                final bookings = snapshot.data ?? [];
-
-                if (bookings.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return FadeInUp(
-                      delay: Duration(milliseconds: index * 100),
-                      child: _buildBookingCard(booking),
-                    );
-                  },
-                );
-              },
-            ),
+                },
+              ),
     );
   }
 
@@ -378,7 +437,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildBookingCard(Booking booking) {
     var statusColor = _getStatusColor(booking.status);
-    final statusText = _getStatusText(booking.status, booking.bookingDate, booking.timeSlot);
+    final statusText = _getStatusText(
+      booking.status,
+      booking.bookingDate,
+      booking.timeSlot,
+    );
     if (statusText == 'Completed') {
       statusColor = AppColors.success;
     }
@@ -392,12 +455,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isUpcoming ? AppColors.primary.withOpacity(0.4) : statusColor.withOpacity(0.1),
+          color:
+              isUpcoming
+                  ? AppColors.primary.withOpacity(0.4)
+                  : statusColor.withOpacity(0.1),
           width: isUpcoming ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isUpcoming ? AppColors.primary : Colors.black).withOpacity(0.06),
+            color: (isUpcoming ? AppColors.primary : Colors.black).withOpacity(
+              0.06,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -423,7 +491,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.timer_outlined, color: AppColors.primary, size: 16),
+                    const Icon(
+                      Icons.timer_outlined,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       timeLeft.toUpperCase(),
@@ -437,7 +509,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ],
                 ),
               ),
-            
+
             Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -455,7 +527,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 color: AppColors.primary.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.ev_station, color: AppColors.primary, size: 24),
+                              child: const Icon(
+                                Icons.ev_station,
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -486,11 +562,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: isUpcoming ? AppColors.primary : statusColor.withOpacity(0.1),
+                          color:
+                              isUpcoming
+                                  ? AppColors.primary
+                                  : statusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isUpcoming ? AppColors.primary : statusColor),
+                          border: Border.all(
+                            color: isUpcoming ? AppColors.primary : statusColor,
+                          ),
                         ),
                         child: Text(
                           statusText.toUpperCase(),
@@ -506,7 +590,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       if (isUpcoming || booking.status == BookingStatus.pending)
                         IconButton(
                           onPressed: () => _cancelBooking(booking.id),
-                          icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 20),
+                          icon: const Icon(
+                            Icons.cancel_outlined,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           tooltip: 'Cancel booking',
@@ -514,12 +602,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       else
                         IconButton(
                           onPressed: () => _deleteBooking(booking.id),
-                          icon: const Icon(Icons.delete_outline, color: AppColors.textHint, size: 20),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.textHint,
+                            size: 20,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           tooltip: 'Delete history record',
                         ),
-
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -530,24 +621,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.background.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.surfaceLight.withOpacity(0.5)),
+                      border: Border.all(
+                        color: AppColors.surfaceLight.withOpacity(0.5),
+                      ),
                     ),
                     child: Column(
                       children: [
                         Row(
                           children: [
-                            Expanded(child: _buildDetailRow(Icons.calendar_today_rounded, dateFormat.format(booking.bookingDate))),
-                            Expanded(child: _buildDetailRow(Icons.schedule_rounded, booking.timeSlot)),
+                            Expanded(
+                              child: _buildDetailRow(
+                                Icons.calendar_today_rounded,
+                                dateFormat.format(booking.bookingDate),
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildDetailRow(
+                                Icons.schedule_rounded,
+                                booking.timeSlot,
+                              ),
+                            ),
                           ],
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Divider(color: AppColors.surfaceLight.withOpacity(0.5), height: 1),
+                          child: Divider(
+                            color: AppColors.surfaceLight.withOpacity(0.5),
+                            height: 1,
+                          ),
                         ),
                         Row(
                           children: [
-                            Expanded(child: _buildDetailRow(Icons.timelapse_rounded, '${booking.hours} Hours')),
-                            Expanded(child: _buildDetailRow(Icons.account_balance_wallet_rounded, '₹${booking.totalPrice.toStringAsFixed(0)}')),
+                            Expanded(
+                              child: _buildDetailRow(
+                                Icons.timelapse_rounded,
+                                '${booking.hours} Hours',
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildDetailRow(
+                                Icons.account_balance_wallet_rounded,
+                                '₹${booking.totalPrice.toStringAsFixed(0)}',
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -555,19 +671,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
 
                   // Rejection reason (if rejected)
-                  if (booking.status == BookingStatus.rejected && booking.rejectionReason != null) ...[
+                  if (booking.status == BookingStatus.rejected &&
+                      booking.rejectionReason != null) ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.error.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                        border: Border.all(
+                          color: AppColors.error.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.info_outline, color: AppColors.error, size: 18),
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.error,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(

@@ -18,7 +18,10 @@ class WalletScreen extends StatelessWidget {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -90,7 +93,9 @@ class WalletScreen extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 5,
-              separatorBuilder: (context, index) => const Divider(color: AppColors.surfaceLight),
+              separatorBuilder:
+                  (context, index) =>
+                      const Divider(color: AppColors.surfaceLight),
               itemBuilder: (context, index) {
                 final isCredit = index % 3 == 0;
                 return FadeInLeft(
@@ -104,7 +109,9 @@ class WalletScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isCredit ? Icons.add_circle_outline_rounded : Icons.ev_station_rounded,
+                        isCredit
+                            ? Icons.add_circle_outline_rounded
+                            : Icons.ev_station_rounded,
                         color: isCredit ? AppColors.success : AppColors.primary,
                       ),
                     ),
@@ -117,7 +124,12 @@ class WalletScreen extends StatelessWidget {
                     ),
                     subtitle: Text(
                       '24 Oct 2023, 11:30 AM',
-                      style: GoogleFonts.outfit(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+                      style: GoogleFonts.outfit(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
                     ),
                     trailing: Text(
                       isCredit ? '+₹ 500' : '-₹ 120',

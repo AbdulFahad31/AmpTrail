@@ -1,11 +1,4 @@
-
-
-enum ConnectorType {
-  type2,
-  ccs2,
-  chademo,
-  gb_t,
-}
+enum ConnectorType { type2, ccs2, chademo, gb_t }
 
 class Vehicle {
   final String id;

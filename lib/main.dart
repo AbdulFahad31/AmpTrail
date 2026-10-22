@@ -8,12 +8,14 @@ import 'package:amptrail_mini/config/api_keys.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase using google-services.json
   await Firebase.initializeApp();
-  
-  debugPrint("DEBUG: Firebase initialized with Project Number: ${Firebase.app().options.messagingSenderId}");
-  
+
+  debugPrint(
+    "DEBUG: Firebase initialized with Project Number: ${Firebase.app().options.messagingSenderId}",
+  );
+
   // Initialize Mapbox with the token
   MapboxOptions.setAccessToken(MAPBOX_TOKEN);
 

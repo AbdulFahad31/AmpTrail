@@ -10,11 +10,14 @@ class HelpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
     final surfaceColor = Theme.of(context).cardColor;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Help & Support', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Help & Support',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -28,28 +31,55 @@ class HelpScreen extends StatelessWidget {
                 color: surfaceColor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                  ),
                 ],
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.support_agent_rounded, size: 60, color: AppColors.primary),
+                  const Icon(
+                    Icons.support_agent_rounded,
+                    size: 60,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Need Assistance?',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Our support team is available 24/7 to help you with any issues.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(color: textColor.withOpacity(0.7)),
+                    style: GoogleFonts.outfit(
+                      color: textColor.withOpacity(0.7),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   ListTile(
-                    leading: const Icon(Icons.email_outlined, color: AppColors.primary),
-                    title: Text('Email Us', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: textColor)),
-                    subtitle: Text('amptrail.devteam@gmail.com', style: GoogleFonts.outfit(color: textColor.withOpacity(0.7))),
+                    leading: const Icon(
+                      Icons.email_outlined,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(
+                      'Email Us',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'amptrail.devteam@gmail.com',
+                      style: GoogleFonts.outfit(
+                        color: textColor.withOpacity(0.7),
+                      ),
+                    ),
                     onTap: () async {
                       final Uri emailUri = Uri(
                         scheme: 'mailto',
@@ -63,9 +93,23 @@ class HelpScreen extends StatelessWidget {
                   ),
                   const Divider(),
                   ListTile(
-                    leading: const Icon(Icons.phone_outlined, color: AppColors.primary),
-                    title: Text('Call Us', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: textColor)),
-                    subtitle: Text('+91 7539934156 / 9600781450', style: GoogleFonts.outfit(color: textColor.withOpacity(0.7))),
+                    leading: const Icon(
+                      Icons.phone_outlined,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(
+                      'Call Us',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '+91 7539934156 / 9600781450',
+                      style: GoogleFonts.outfit(
+                        color: textColor.withOpacity(0.7),
+                      ),
+                    ),
                     onTap: () {
                       _showCallDialog(context, textColor, surfaceColor);
                     },
@@ -79,33 +123,48 @@ class HelpScreen extends StatelessWidget {
     );
   }
 
-  void _showCallDialog(BuildContext context, Color textColor, Color surfaceColor) {
+  void _showCallDialog(
+    BuildContext context,
+    Color textColor,
+    Color surfaceColor,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: surfaceColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select Number',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
-            ),
-            const SizedBox(height: 24),
-            _buildCallOption(context, '+91 7539934156', textColor),
-            const SizedBox(height: 16),
-            _buildCallOption(context, '+91 9600780150', textColor),
-            const SizedBox(height: 16),
-          ],
-        ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Number',
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildCallOption(context, '+91 7539934156', textColor),
+                const SizedBox(height: 16),
+                _buildCallOption(context, '+91 9600780150', textColor),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
     );
   }
 
-  Widget _buildCallOption(BuildContext context, String number, Color textColor) {
+  Widget _buildCallOption(
+    BuildContext context,
+    String number,
+    Color textColor,
+  ) {
     return InkWell(
       onTap: () async {
         final Uri telUri = Uri(scheme: 'tel', path: number.replaceAll(' ', ''));
@@ -124,9 +183,19 @@ class HelpScreen extends StatelessWidget {
           children: [
             const Icon(Icons.phone_rounded, color: AppColors.primary),
             const SizedBox(width: 16),
-            Text(number, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+            Text(
+              number,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
             const Spacer(),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+            ),
           ],
         ),
       ),

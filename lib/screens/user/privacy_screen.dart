@@ -8,7 +8,10 @@ class PrivacyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Privacy & Security', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Privacy & Security',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -44,10 +47,7 @@ class PrivacyScreen extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -55,7 +55,10 @@ class PrivacyScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.shield_outlined, color: Theme.of(context).primaryColor),
+              Icon(
+                Icons.shield_outlined,
+                color: Theme.of(context).primaryColor,
+              ),
               const SizedBox(width: 8),
               Text(
                 title,

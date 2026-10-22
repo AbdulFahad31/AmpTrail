@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
@@ -9,7 +8,8 @@ class VehicleManagementScreen extends StatefulWidget {
   const VehicleManagementScreen({super.key});
 
   @override
-  State<VehicleManagementScreen> createState() => _VehicleManagementScreenState();
+  State<VehicleManagementScreen> createState() =>
+      _VehicleManagementScreenState();
 }
 
 class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
@@ -25,7 +25,10 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -66,7 +69,11 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                                   color: AppColors.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.directions_car_filled_rounded, color: AppColors.primary, size: 32),
+                                child: const Icon(
+                                  Icons.directions_car_filled_rounded,
+                                  color: AppColors.primary,
+                                  size: 32,
+                                ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -91,7 +98,10 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.check_circle_rounded, color: AppColors.primary),
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 20),
@@ -100,8 +110,14 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildInfoChip(Icons.flash_on_rounded, vehicle.connectorType.name.toUpperCase()),
-                              _buildInfoChip(Icons.battery_charging_full_rounded, '${vehicle.batteryCapacity} kWh'),
+                              _buildInfoChip(
+                                Icons.flash_on_rounded,
+                                vehicle.connectorType.name.toUpperCase(),
+                              ),
+                              _buildInfoChip(
+                                Icons.battery_charging_full_rounded,
+                                '${vehicle.batteryCapacity} kWh',
+                              ),
                             ],
                           ),
                         ],
@@ -120,12 +136,17 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                 icon: const Icon(Icons.add_rounded),
                 label: Text(
                   'Add New Vehicle',
-                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -143,7 +164,11 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+          style: GoogleFonts.outfit(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -21,7 +20,7 @@ class AppColors {
   static const Color error = Color(0xFFEF4444);
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFFFC400); // Amber for pending status
-  
+
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF00E676), Color(0xFF00C853)],

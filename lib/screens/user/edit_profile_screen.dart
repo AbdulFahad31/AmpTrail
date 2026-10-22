@@ -39,7 +39,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _loadLocalImage() async {
     final user = _auth.currentUser;
     if (user == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('profile_image_${user.uid}');
     if (imagePath != null && File(imagePath).existsSync()) {
@@ -53,7 +53,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = _auth.currentUser;
     if (user != null) {
       _nameController.text = user.displayName ?? 'User';
-      
+
       // Also try to get from Firestore for "perfect" sync
       final profile = await _userService.getUserProfile();
       if (profile != null && profile['name'] != null && mounted) {
@@ -81,8 +81,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         // Save image PERMANENTLY in app documentation directory
         final appDir = await getApplicationDocumentsDirectory();
-        final fileName = "profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}";
-        final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
+        final fileName =
+            "profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}";
+        final savedImage = await File(
+          image.path,
+        ).copy('${appDir.path}/$fileName');
 
         setState(() {
           _profileImage = savedImage;
@@ -110,8 +113,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (user == null) return;
 
         final appDir = await getApplicationDocumentsDirectory();
-        final fileName = "profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}";
-        final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
+        final fileName =
+            "profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}";
+        final savedImage = await File(
+          image.path,
+        ).copy('${appDir.path}/$fileName');
 
         setState(() {
           _profileImage = savedImage;
@@ -132,47 +138,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Choose Profile Picture',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+      builder:
+          (context) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Choose Profile Picture',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(
+                    Icons.camera_alt,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: GoogleFonts.outfit(color: AppColors.textPrimary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _takePicture();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.outfit(color: AppColors.textPrimary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage();
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
-              title: Text('Take Photo', style: GoogleFonts.outfit(color: AppColors.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                _takePicture();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: AppColors.primary),
-              title: Text('Choose from Gallery', style: GoogleFonts.outfit(color: AppColors.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage();
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   Future<void> _saveProfile() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name cannot be empty')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name cannot be empty')));
       return;
     }
 
@@ -182,20 +201,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final user = _auth.currentUser;
       if (user != null) {
         final newName = _nameController.text.trim();
-        
+
         // 1. Update Firebase Auth display name (Essential)
-        await user.updateDisplayName(newName).timeout(const Duration(seconds: 5));
-        
+        await user
+            .updateDisplayName(newName)
+            .timeout(const Duration(seconds: 5));
+
         // 2. Sync to Firestore (Persistence) - with timeout to prevent hanging
         try {
-          await _userService.saveUserProfile(newName).timeout(const Duration(seconds: 8));
+          await _userService
+              .saveUserProfile(newName)
+              .timeout(const Duration(seconds: 8));
         } catch (e) {
           debugPrint("Firestore sync timed out or failed: $e");
           // We continue anyway since Auth was updated and image is saved locally
         }
-        
+
         await user.reload();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -212,8 +235,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           );
           Navigator.pop(context, true);
         }
-      }
- else {
+      } else {
         // Fallback for non-logged in state (shouldn't happen usually)
         Navigator.pop(context);
       }
@@ -221,7 +243,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e', style: GoogleFonts.outfit()),
+            content: Text(
+              'Error updating profile: $e',
+              style: GoogleFonts.outfit(),
+            ),
             backgroundColor: AppColors.error,
           ),
         );
@@ -247,7 +272,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         title: Text(
           'Edit Profile',
@@ -271,33 +299,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 onTap: _showImageSourceDialog,
                 child: Stack(
                   children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Theme.of(context).cardColor,
-                        backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                        child: _profileImage == null
-                            ? Text(
-                                _getInitials(),
-                                style: GoogleFonts.outfit(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            : null,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Theme.of(context).cardColor,
+                        backgroundImage:
+                            _profileImage != null
+                                ? FileImage(_profileImage!)
+                                : null,
+                        child:
+                            _profileImage == null
+                                ? Text(
+                                  _getInitials(),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                )
+                                : null,
                       ),
                     ),
                     Positioned(
@@ -308,9 +340,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.background, width: 3),
+                          border: Border.all(
+                            color: AppColors.background,
+                            width: 3,
+                          ),
                         ),
-                        child: const Icon(Icons.camera_alt, color: AppColors.background, size: 20),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: AppColors.background,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
@@ -321,7 +360,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 12),
             Text(
               'Tap to change photo',
-              style: GoogleFonts.outfit(color: AppColors.textHint, fontSize: 14),
+              style: GoogleFonts.outfit(
+                color: AppColors.textHint,
+                fontSize: 14,
+              ),
             ),
 
             const SizedBox(height: 40),
@@ -341,24 +383,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _nameController,
-                  style: GoogleFonts.outfit(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
+                  style: GoogleFonts.outfit(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Enter your name',
-                    hintStyle: GoogleFonts.outfit(color: Theme.of(context).hintColor),
+                    hintStyle: GoogleFonts.outfit(
+                      color: Theme.of(context).hintColor,
+                    ),
                     filled: true,
                     fillColor: Theme.of(context).cardColor,
-                    prefixIcon: const Icon(Icons.person_outline, color: AppColors.primary),
+                    prefixIcon: const Icon(
+                      Icons.person_outline,
+                      color: AppColors.primary,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -381,20 +436,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: _isLoading 
-                      ? const SizedBox(
-                          height: 20, 
-                          width: 20, 
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
-                        )
-                      : Text(
-                          'Save Changes',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.background,
+                  child:
+                      _isLoading
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.background,
+                            ),
+                          )
+                          : Text(
+                            'Save Changes',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.background,
+                            ),
                           ),
-                        ),
                 ),
               ),
             ),

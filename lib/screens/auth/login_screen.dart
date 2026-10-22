@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: _completePhoneNumber,
@@ -50,10 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => OtpVerificationScreen(
-                phoneNumber: _completePhoneNumber,
-                verificationId: verificationId,
-              ),
+              builder:
+                  (context) => OtpVerificationScreen(
+                    phoneNumber: _completePhoneNumber,
+                    verificationId: verificationId,
+                  ),
             ),
           );
         },
@@ -133,8 +134,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   initialCountryCode: 'IN',
                   style: const TextStyle(color: AppColors.textPrimary),
-                  dropdownTextStyle: const TextStyle(color: AppColors.textPrimary),
-                  dropdownIcon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                  dropdownTextStyle: const TextStyle(
+                    color: AppColors.textPrimary,
+                  ),
+                  dropdownIcon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: AppColors.textSecondary,
+                  ),
                   onChanged: (phone) {
                     _completePhoneNumber = phone.completeNumber;
                   },
@@ -153,20 +159,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Get OTP',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.background,
+                  child:
+                      _isLoading
+                          ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: AppColors.background,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : Text(
+                            'Get OTP',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.background,
+                            ),
                           ),
-                        ),
                 ),
               ),
               const SizedBox(height: 80),

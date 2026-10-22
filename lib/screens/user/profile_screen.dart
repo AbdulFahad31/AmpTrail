@@ -33,7 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadFirestoreData({bool forceRefresh = false}) async {
-    final profile = await _userService.getUserProfile(forceRefresh: forceRefresh);
+    final profile = await _userService.getUserProfile(
+      forceRefresh: forceRefresh,
+    );
     if (profile != null && profile['name'] != null) {
       if (mounted) {
         setState(() {
@@ -50,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadLocalImage() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('profile_image_${user.uid}');
     if (imagePath != null && File(imagePath).existsSync()) {
@@ -85,76 +87,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showAboutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.electric_bolt, color: AppColors.primary),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 12),
-            Text(
-              'About AmpTrail',
-              style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AmpTrail is a smart EV charging station booking app that helps you find, book, and manage charging slots effortlessly.',
-              style: GoogleFonts.outfit(color: AppColors.textSecondary, height: 1.5),
-            ),
-            const SizedBox(height: 20),
-            _buildInfoRow('Version', '1.0.0'),
-            const SizedBox(height: 12),
-            _buildInfoRow('Developed by', 'AmpTrail Team'),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.copyright, color: AppColors.primary, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '2025 AmpTrail. All rights reserved.',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: const Icon(
+                    Icons.electric_bolt,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'About AmpTrail',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AmpTrail is a smart EV charging station booking app that helps you find, book, and manage charging slots effortlessly.',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildInfoRow('Version', '1.0.0'),
+                const SizedBox(height: 12),
+                _buildInfoRow('Developed by', 'AmpTrail Team'),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.copyright,
+                        color: AppColors.primary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '2025 AmpTrail. All rights reserved.',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Close',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: GoogleFonts.outfit(color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -181,80 +199,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showTermsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Terms & Conditions',
-          style: GoogleFonts.outfit(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '1. Acceptance of Terms',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Terms & Conditions',
+              style: GoogleFonts.outfit(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '1. Acceptance of Terms',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'By using AmpTrail, you agree to these terms and conditions.',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '2. Service Usage',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'AmpTrail provides a platform to book EV charging slots. Actual charging services are provided by station owners.',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '3. User Responsibilities',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Users must provide accurate information and arrive on time for confirmed bookings.',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '© 2025 AmpTrail. All rights reserved.',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textHint,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Close',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'By using AmpTrail, you agree to these terms and conditions.',
-                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '2. Service Usage',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'AmpTrail provides a platform to book EV charging slots. Actual charging services are provided by station owners.',
-                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '3. User Responsibilities',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Users must provide accurate information and arrive on time for confirmed bookings.',
-                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '© 2025 AmpTrail. All rights reserved.',
-                style: GoogleFonts.outfit(color: AppColors.textHint, fontSize: 12),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: GoogleFonts.outfit(color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -283,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            
+
             // Profile Picture & Name
             FadeInDown(
               delay: const Duration(milliseconds: 200),
@@ -305,17 +344,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: AppColors.surface,
-                      backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                      child: _profileImage == null 
-                        ? Text(
-                            _displayName.isNotEmpty ? _displayName[0].toUpperCase() : 'U',
-                            style: GoogleFonts.outfit(
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          )
-                        : null,
+                      backgroundImage:
+                          _profileImage != null
+                              ? FileImage(_profileImage!)
+                              : null,
+                      child:
+                          _profileImage == null
+                              ? Text(
+                                _displayName.isNotEmpty
+                                    ? _displayName[0].toUpperCase()
+                                    : 'U',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                              : null,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -338,42 +383,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Statistics section removed
-            
             const SizedBox(height: 12),
-            
+
             const SizedBox(height: 32),
 
             // Account Settings Section
             FadeInUp(
               delay: const Duration(milliseconds: 400),
-              child: _buildSection(
-                'Account Settings',
-                [
-                  _buildMenuItem(Icons.person_outline, 'Edit Profile', () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
-                    );
-                    _refreshUser();
-                  }),
-                  _buildMenuItem(Icons.settings_outlined, 'Settings', () {
+              child: _buildSection('Account Settings', [
+                _buildMenuItem(Icons.person_outline, 'Edit Profile', () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
+                  _refreshUser();
+                }),
+                _buildMenuItem(Icons.settings_outlined, 'Settings', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                }),
+                _buildMenuItem(
+                  Icons.security_outlined,
+                  'Privacy & Security',
+                  () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const PrivacyScreen(),
+                      ),
                     );
-                  }),
-                  _buildMenuItem(Icons.security_outlined, 'Privacy & Security', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
-                    );
-                  }),
-                ],
-              ),
+                  },
+                ),
+              ]),
             ),
 
             const SizedBox(height: 24),
@@ -381,19 +432,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // App Settings Section
             FadeInUp(
               delay: const Duration(milliseconds: 600),
-              child: _buildSection(
-                'App Settings',
-                [
-                  _buildMenuItem(Icons.help_outline, 'Help & Support', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HelpScreen()),
-                    );
-                  }),
-                  _buildMenuItem(Icons.info_outline, 'About', _showAboutDialog),
-                  _buildMenuItem(Icons.policy_outlined, 'Terms & Conditions', _showTermsDialog),
-                ],
-              ),
+              child: _buildSection('App Settings', [
+                _buildMenuItem(Icons.help_outline, 'Help & Support', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HelpScreen()),
+                  );
+                }),
+                _buildMenuItem(Icons.info_outline, 'About', _showAboutDialog),
+                _buildMenuItem(
+                  Icons.policy_outlined,
+                  'Terms & Conditions',
+                  _showTermsDialog,
+                ),
+              ]),
             ),
 
             const SizedBox(height: 40),
@@ -507,10 +559,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.textSecondary,
-            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
         ),
       ),
