@@ -11,23 +11,25 @@ import 'dart:async';
 
 class BookingConfirmationScreen extends StatefulWidget {
   final Station station;
-  
+
   const BookingConfirmationScreen({super.key, required this.station});
 
   @override
-  State<BookingConfirmationScreen> createState() => _BookingConfirmationScreenState();
+  State<BookingConfirmationScreen> createState() =>
+      _BookingConfirmationScreenState();
 }
 
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   final StationService _stationService = StationService();
   final user = FirebaseAuth.instance.currentUser;
-  
+
   DateTime selectedDate = DateTime.now();
   TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay endTime = const TimeOfDay(hour: 10, minute: 0);
   int selectedHours = 1;
   int selectedPort = 1;
-  String _status = 'selection'; // selection, requesting, waiting, accepted, rejected
+  String _status =
+      'selection'; // selection, requesting, waiting, accepted, rejected
 
   List<Booking> bookedSlots = [];
   StreamSubscription<List<Booking>>? _slotsSubscription;
@@ -47,7 +49,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   void _setInitialTimes() {
     final now = DateTime.now();
     int startHour = now.hour + 1;
-    
+
     if (startHour >= 24) {
       // It's very late, default to tomorrow morning 9 AM
       selectedDate = now.add(const Duration(days: 1));
@@ -58,7 +60,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       selectedDate = now;
       startTime = TimeOfDay(hour: startHour, minute: 0);
       endTime = TimeOfDay(hour: (startHour + 1) % 24, minute: 0);
-      
+
       // If it's late in the night (e.g. after 10 PM), default to tomorrow 9 AM anyway
       if (now.hour >= 22) {
         selectedDate = now.add(const Duration(days: 1));
@@ -66,7 +68,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         endTime = const TimeOfDay(hour: 10, minute: 0);
       }
     }
-    
+
     _loadBookedSlots();
     _calculateHours();
   }
@@ -74,11 +76,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   void _calculateHours() {
     final startMinutes = startTime.hour * 60 + startTime.minute;
     final endMinutes = endTime.hour * 60 + endTime.minute;
-    
+
     int diff = endMinutes - startMinutes;
     // If end time is before start time, assume it's for the next day
-    if (diff <= 0) diff += 24 * 60; 
-    
+    if (diff <= 0) diff += 24 * 60;
+
     setState(() {
       selectedHours = (diff / 60).ceil();
       if (selectedHours == 0) selectedHours = 1;
@@ -97,42 +99,48 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       startTime.hour,
       startTime.minute,
     );
-    
+
     return bookingStart.isBefore(now);
   }
 
   void _loadBookedSlots() {
     _slotsSubscription?.cancel();
-    _slotsSubscription = _stationService.bookedSlotsStream(widget.station.id, selectedDate).listen(
-      (slots) {
-        if (mounted) {
-          setState(() {
-            bookedSlots = slots;
-          });
-        }
-      },
-      onError: (e) {
-        debugPrint("Error listening to booked slots: $e");
-      }
-    );
+    _slotsSubscription = _stationService
+        .bookedSlotsStream(widget.station.id, selectedDate)
+        .listen(
+          (slots) {
+            if (mounted) {
+              setState(() {
+                bookedSlots = slots;
+              });
+            }
+          },
+          onError: (e) {
+            debugPrint("Error listening to booked slots: $e");
+          },
+        );
   }
 
   int _parseTimeStr(String timeStr) {
-    timeStr = timeStr.trim().toUpperCase().replaceAll('\u202F', ' ').replaceAll('.', '');
+    timeStr = timeStr
+        .trim()
+        .toUpperCase()
+        .replaceAll('\u202F', ' ')
+        .replaceAll('.', '');
     bool isPM = timeStr.contains('PM');
     bool isAM = timeStr.contains('AM');
-    
+
     timeStr = timeStr.replaceAll('PM', '').replaceAll('AM', '').trim();
     final parts = timeStr.split(':');
     if (parts.length >= 2) {
       int h = int.tryParse(parts[0]) ?? 0;
       int m = int.tryParse(parts[1]) ?? 0;
-      
+
       if (isPM && h < 12) h += 12;
       if (isAM && h == 12) h = 0;
       return h * 60 + m;
     }
-    return 0; 
+    return 0;
   }
 
   bool _isOverlapping() {
@@ -167,7 +175,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     if (_isTimeInPast()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Cannot book a time slot in the past. Please select a future time."),
+          content: Text(
+            "Cannot book a time slot in the past. Please select a future time.",
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -177,7 +187,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     if (_isOverlapping()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("This time slot is already booked. Please select a different time."),
+          content: Text(
+            "This time slot is already booked. Please select a different time.",
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -187,21 +199,22 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     final startMinutes = startTime.hour * 60 + startTime.minute;
     final endMinutes = endTime.hour * 60 + endTime.minute;
     if (endMinutes <= startMinutes && selectedDate.day == DateTime.now().day) {
-       // This handles the "next day" logic but if it's today it might be confusing
-       // For now, let's just ensure duration is positive and not crossing midnight if not intended
+      // This handles the "next day" logic but if it's today it might be confusing
+      // For now, let's just ensure duration is positive and not crossing midnight if not intended
     }
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentScreen(
-          amount: totalPrice,
-          stationName: widget.station.name,
-          onPaymentSuccess: () {
-            Navigator.pop(context); // Close payment screen
-            _startBookingProcess();
-          },
-        ),
+        builder:
+            (context) => PaymentScreen(
+              amount: totalPrice,
+              stationName: widget.station.name,
+              onPaymentSuccess: () {
+                Navigator.pop(context); // Close payment screen
+                _startBookingProcess();
+              },
+            ),
       ),
     );
   }
@@ -209,10 +222,21 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   Future<void> _startBookingProcess() async {
     setState(() => _status = 'requesting');
 
-    final String timeRange = "${startTime.format(context)} - ${endTime.format(context)}";
+    final String timeRange =
+        "${startTime.format(context)} - ${endTime.format(context)}";
 
     // Use the most unique identifier available
-    final String userPhoneIdentifier = user?.phoneNumber ?? user?.email ?? '+910000000000';
+    final String userPhoneIdentifier =
+        user?.phoneNumber ?? user?.email ?? '+910000000000';
+
+    final startDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      startTime.hour,
+      startTime.minute,
+    );
+    final endDateTime = startDateTime.add(Duration(hours: selectedHours));
 
     // Create booking
     final booking = Booking(
@@ -224,6 +248,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       stationName: widget.station.name,
       bookingDate: selectedDate,
       timeSlot: timeRange,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
       pricePerHr: pricePerHr,
       hours: selectedHours,
       totalPrice: totalPrice,
@@ -233,15 +259,21 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
     debugPrint("DEBUG: Saving booking for $userPhoneIdentifier");
 
-    // Save to Firestore
-    final success = await _stationService.saveBooking(booking);
+    // Save to Firestore with atomic concurrency check
+    final result = await _stationService.saveBooking(booking);
 
-    if (success && mounted) {
+    if (result.success && mounted) {
       setState(() => _status = 'accepted');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking failed. Please try again.')),
+          SnackBar(
+            content: Text(
+              result.errorMessage ?? 'Booking failed. Please try again.',
+            ),
+            backgroundColor:
+                result.isConflict ? AppColors.error : AppColors.surface,
+          ),
         );
         setState(() => _status = 'selection');
       }
@@ -298,8 +330,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 delay: const Duration(milliseconds: 250),
                 child: _buildPortSelection(),
               ),
-            if (widget.station.totalPorts > 1)
-              const SizedBox(height: 24),
+            if (widget.station.totalPorts > 1) const SizedBox(height: 24),
 
             // Charging Type Selection
             FadeInUp(
@@ -313,21 +344,27 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               delay: const Duration(milliseconds: 400),
               child: _buildTimeRangeSelection(),
             ),
-            
+
             if (_isTimeInPast())
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: FadeIn(
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 16),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.error,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
-                      Text(
-                        'This time slot has already passed',
-                        style: GoogleFonts.outfit(
-                          color: AppColors.error,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'This time slot has already passed',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.error,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -340,7 +377,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 child: FadeIn(
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 16),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.error,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -375,7 +416,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Confirm & Pay ₹${totalPrice.toStringAsFixed(0)}',
@@ -410,7 +453,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               color: AppColors.primary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.ev_station, color: AppColors.primary, size: 28),
+            child: const Icon(
+              Icons.ev_station,
+              color: AppColors.primary,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -428,7 +475,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.location_on, color: AppColors.textSecondary, size: 14),
+                    const Icon(
+                      Icons.location_on,
+                      color: AppColors.textSecondary,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -496,7 +547,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
+                const Icon(
+                  Icons.calendar_today,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
@@ -531,10 +586,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           children: [
             Expanded(
               child: _buildTypeCard(
-                widget.station.chargerType, 
-                Icons.electrical_services, 
-                'Station Standard Outlet', 
-                '₹${widget.station.pricePerHr.toStringAsFixed(0)}'
+                widget.station.chargerType,
+                Icons.electrical_services,
+                'Station Standard Outlet',
+                '₹${widget.station.pricePerHr.toStringAsFixed(0)}',
               ),
             ),
           ],
@@ -549,9 +604,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary,
-        ),
+        border: Border.all(color: AppColors.primary),
       ),
       child: Column(
         children: [
@@ -605,18 +658,27 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 onTap: () => setState(() => selectedPort = portNumber),
                 child: Container(
                   margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.surfaceLight,
+                      color:
+                          isSelected
+                              ? AppColors.primary
+                              : AppColors.surfaceLight,
                     ),
                   ),
                   child: Text(
                     'Port $portNumber',
                     style: GoogleFonts.outfit(
-                      color: isSelected ? AppColors.background : AppColors.textPrimary,
+                      color:
+                          isSelected
+                              ? AppColors.background
+                              : AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -664,14 +726,21 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             padding: const EdgeInsets.only(top: 12),
             child: Text(
               'Total Duration: $selectedHours ${selectedHours == 1 ? 'hour' : 'hours'}',
-              style: GoogleFonts.outfit(color: AppColors.primary, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildTimePicker(String label, TimeOfDay time, Function(TimeOfDay) onPicked) {
+  Widget _buildTimePicker(
+    String label,
+    TimeOfDay time,
+    Function(TimeOfDay) onPicked,
+  ) {
     return GestureDetector(
       onTap: () async {
         final TimeOfDay? picked = await showTimePicker(
@@ -701,7 +770,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               time.format(context),
@@ -722,7 +797,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.2), AppColors.secondary.withOpacity(0.2)],
+          colors: [
+            AppColors.primary.withOpacity(0.2),
+            AppColors.secondary.withOpacity(0.2),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -740,7 +818,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
               Text(
                 '₹${pricePerHr.toStringAsFixed(0)}',
-                style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -754,7 +835,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
               Text(
                 '$selectedHours ${selectedHours == 1 ? 'hour' : 'hours'}',
-                style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -808,12 +892,16 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         // Navigate to dashboard and pop all screens back to home
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: Text(
                         'Back to Home',
@@ -841,7 +929,10 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           child: const SizedBox(
             height: 100,
             width: 100,
-            child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 8),
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 8,
+            ),
           ),
         );
       case 'waiting':
@@ -853,7 +944,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               color: AppColors.accent.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.notifications_active_rounded, size: 80, color: AppColors.accent),
+            child: const Icon(
+              Icons.notifications_active_rounded,
+              size: 80,
+              color: AppColors.accent,
+            ),
           ),
         );
       case 'accepted':
@@ -864,7 +959,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               color: AppColors.success.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle_rounded, size: 80, color: AppColors.success),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              size: 80,
+              color: AppColors.success,
+            ),
           ),
         );
       default:
@@ -875,8 +974,12 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   Widget _buildStatusText() {
     String text = '';
     switch (_status) {
-      case 'requesting': text = 'Finalizing Booking...'; break;
-      case 'accepted': text = 'Booking Confirmed!'; break;
+      case 'requesting':
+        text = 'Finalizing Booking...';
+        break;
+      case 'accepted':
+        text = 'Booking Confirmed!';
+        break;
     }
     return Text(
       text,
@@ -892,16 +995,18 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   Widget _buildSubText() {
     String text = '';
     switch (_status) {
-      case 'requesting': text = 'Just a moment, we are securing your slot.'; break;
-      case 'accepted': text = 'Your slot has been reserved. You can view it in your booking history.'; break;
+      case 'requesting':
+        text = 'Just a moment, we are securing your slot.';
+        break;
+      case 'accepted':
+        text =
+            'Your slot has been reserved. You can view it in your booking history.';
+        break;
     }
     return Text(
       text,
       textAlign: TextAlign.center,
-      style: GoogleFonts.outfit(
-        fontSize: 16,
-        color: AppColors.textSecondary,
-      ),
+      style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textSecondary),
     );
   }
 }

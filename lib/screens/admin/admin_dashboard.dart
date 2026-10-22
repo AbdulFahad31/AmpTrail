@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:amptrail_mini/constants/colors.dart';
 import 'package:amptrail_mini/models/booking_model.dart';
 import 'package:amptrail_mini/services/api_service.dart';
+import 'package:amptrail_mini/services/station_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:amptrail_mini/screens/auth/login_screen.dart';
 
@@ -16,6 +17,7 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   final ApiService _apiService = ApiService();
+  final StationService _stationService = StationService();
   List<Booking> _pendingBookings = [];
   bool _isLoading = true;
 
@@ -27,15 +29,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _loadPendingBookings() async {
     setState(() => _isLoading = true);
-    final bookings = await _apiService.getPendingBookings();
-    setState(() {
-      _pendingBookings = bookings;
-      _isLoading = false;
-    });
+    // 1. Try real Firestore bookings first
+    List<Booking> bookings = await _stationService.getAdminBookings();
+
+    // 2. Fallback to mock data if Firestore has no records yet
+    if (bookings.isEmpty) {
+      bookings = await _apiService.getPendingBookings();
+    }
+
+    if (mounted) {
+      setState(() {
+        _pendingBookings = bookings;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _acceptBooking(String bookingId) async {
-    final success = await _apiService.acceptBooking(bookingId);
+    bool success = await _stationService.updateBookingStatus(
+      bookingId,
+      BookingStatus.accepted,
+    );
+    if (!success) {
+      success = await _apiService.acceptBooking(bookingId);
+    }
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -49,56 +66,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _rejectBooking(String bookingId) async {
     final TextEditingController reasonController = TextEditingController();
-    
+
     await showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Reject Booking',
-          style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: reasonController,
-          style: const TextStyle(color: AppColors.textPrimary),
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Enter reason for rejection...',
-            hintStyle: GoogleFonts.outfit(color: AppColors.textHint),
-            filled: true,
-            fillColor: AppColors.background,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+      builder:
+          (dialogContext) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: Text(
+              'Reject Booking',
+              style: GoogleFonts.outfit(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              final success = await _apiService.rejectBooking(bookingId, reasonController.text);
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Booking rejected. User will be notified.'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-                _loadPendingBookings();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+            content: TextField(
+              controller: reasonController,
+              style: const TextStyle(color: AppColors.textPrimary),
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Enter reason for rejection...',
+                hintStyle: GoogleFonts.outfit(color: AppColors.textHint),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
-            child: Text('Reject', style: GoogleFonts.outfit(color: Colors.white)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  bool success = await _stationService.updateBookingStatus(
+                    bookingId,
+                    BookingStatus.rejected,
+                    reason: reasonController.text,
+                  );
+                  if (!success) {
+                    success = await _apiService.rejectBooking(
+                      bookingId,
+                      reasonController.text,
+                    );
+                  }
+                  if (success && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Booking rejected. User will be notified.',
+                        ),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                    _loadPendingBookings();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                ),
+                child: Text(
+                  'Reject',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -126,12 +165,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppColors.primary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.admin_panel_settings, color: AppColors.primary),
+                child: const Icon(
+                  Icons.admin_panel_settings,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 'Admin Panel',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -149,49 +194,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _pendingBookings.isEmpty
+      body:
+          _isLoading
+              ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
+              : _pendingBookings.isEmpty
               ? Center(
-                  child: FadeIn(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle_outline, size: 80, color: AppColors.success.withOpacity(0.5)),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No pending requests',
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                child: FadeIn(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 80,
+                        color: AppColors.success.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No pending requests',
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'New booking requests will appear here',
-                          style: GoogleFonts.outfit(color: AppColors.textHint),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadPendingBookings,
-                  color: AppColors.primary,
-                  backgroundColor: AppColors.surface,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _pendingBookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = _pendingBookings[index];
-                      return FadeInUp(
-                        delay: Duration(milliseconds: index * 100),
-                        child: _buildBookingCard(booking),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'New booking requests will appear here',
+                        style: GoogleFonts.outfit(color: AppColors.textHint),
+                      ),
+                    ],
                   ),
                 ),
+              )
+              : RefreshIndicator(
+                onRefresh: _loadPendingBookings,
+                color: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _pendingBookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = _pendingBookings[index];
+                    return FadeInUp(
+                      delay: Duration(milliseconds: index * 100),
+                      child: _buildBookingCard(booking),
+                    );
+                  },
+                ),
+              ),
     );
   }
 
@@ -223,7 +275,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppColors.primary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.person, color: AppColors.primary, size: 24),
+                child: const Icon(
+                  Icons.person,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -240,13 +296,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     Text(
                       booking.userPhone,
-                      style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 14),
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -264,7 +326,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Station Info
           Container(
             padding: const EdgeInsets.all(12),
@@ -274,7 +336,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.ev_station, color: AppColors.primary, size: 20),
+                const Icon(
+                  Icons.ev_station,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -294,8 +360,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             children: [
               Expanded(
-                child: _buildInfoRow(Icons.calendar_today, 
-                  '${booking.bookingDate.day}/${booking.bookingDate.month}/${booking.bookingDate.year}'),
+                child: _buildInfoRow(
+                  Icons.calendar_today,
+                  '${booking.bookingDate.day}/${booking.bookingDate.month}/${booking.bookingDate.year}',
+                ),
               ),
               Expanded(
                 child: _buildInfoRow(Icons.access_time, booking.timeSlot),
@@ -309,7 +377,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: _buildInfoRow(Icons.schedule, '${booking.hours} hrs'),
               ),
               Expanded(
-                child: _buildInfoRow(Icons.currency_rupee, '₹${booking.totalPrice.toStringAsFixed(0)}'),
+                child: _buildInfoRow(
+                  Icons.currency_rupee,
+                  '₹${booking.totalPrice.toStringAsFixed(0)}',
+                ),
               ),
             ],
           ),
@@ -322,12 +393,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: ElevatedButton.icon(
                   onPressed: () => _rejectBooking(booking.id),
                   icon: const Icon(Icons.close, size: 20),
-                  label: Text('Reject', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Reject',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -336,12 +412,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: ElevatedButton.icon(
                   onPressed: () => _acceptBooking(booking.id),
                   icon: const Icon(Icons.check, size: 20),
-                  label: Text('Accept', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Accept',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -360,7 +441,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Flexible(
           child: Text(
             text,
-            style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13),
+            style: GoogleFonts.outfit(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),

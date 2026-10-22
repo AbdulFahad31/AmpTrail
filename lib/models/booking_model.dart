@@ -1,13 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
-enum BookingStatus {
-  pending,
-  accepted,
-  rejected,
-  completed,
-  cancelled,
-}
+enum BookingStatus { pending, accepted, rejected, completed, cancelled }
 
 class Booking {
   final String id;
@@ -18,6 +12,8 @@ class Booking {
   final String stationName;
   final DateTime bookingDate;
   final String timeSlot; // e.g., "10:00 AM - 11:00 AM"
+  final DateTime? startDateTime;
+  final DateTime? endDateTime;
   final double pricePerHr;
   final int hours;
   final double totalPrice;
@@ -34,6 +30,8 @@ class Booking {
     required this.stationName,
     required this.bookingDate,
     required this.timeSlot,
+    this.startDateTime,
+    this.endDateTime,
     required this.pricePerHr,
     required this.hours,
     required this.totalPrice,
@@ -41,6 +39,50 @@ class Booking {
     this.rejectionReason,
     this.portNumber = 1,
   });
+
+  /// Derives start time from base date and slot string (e.g. "09:00 AM - 10:00 AM")
+  static DateTime deriveStartFromSlot(DateTime baseDate, String slot) {
+    try {
+      final parts = slot.split('-');
+      if (parts.isNotEmpty) {
+        final startStr = parts[0]
+            .trim()
+            .toUpperCase()
+            .replaceAll('\u202F', ' ')
+            .replaceAll('.', '');
+        final isPM = startStr.contains('PM');
+        final isAM = startStr.contains('AM');
+        final clean = startStr.replaceAll('PM', '').replaceAll('AM', '').trim();
+        final timeParts = clean.split(':');
+        if (timeParts.isNotEmpty) {
+          int h = int.tryParse(timeParts[0]) ?? 0;
+          int m = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+          if (isPM && h < 12) h += 12;
+          if (isAM && h == 12) h = 0;
+          return DateTime(baseDate.year, baseDate.month, baseDate.day, h, m);
+        }
+      }
+    } catch (_) {}
+    return baseDate;
+  }
+
+  DateTime get calculatedStart {
+    if (startDateTime != null) return startDateTime!;
+    return deriveStartFromSlot(bookingDate, timeSlot);
+  }
+
+  DateTime get calculatedEnd {
+    if (endDateTime != null) return endDateTime!;
+    return calculatedStart.add(Duration(hours: hours > 0 ? hours : 1));
+  }
+
+  /// Verifies whether this booking overlaps with a given time range
+  bool overlapsWith(DateTime start, DateTime end) {
+    if (status == BookingStatus.cancelled || status == BookingStatus.rejected) {
+      return false;
+    }
+    return calculatedStart.isBefore(end) && calculatedEnd.isAfter(start);
+  }
 
   // Convert to JSON for API
   Map<String, dynamic> toJson() {
@@ -53,6 +95,10 @@ class Booking {
       'stationName': stationName,
       'bookingDate': bookingDate.toIso8601String(),
       'timeSlot': timeSlot,
+      'startDateTime':
+          startDateTime?.toIso8601String() ?? calculatedStart.toIso8601String(),
+      'endDateTime':
+          endDateTime?.toIso8601String() ?? calculatedEnd.toIso8601String(),
       'pricePerHr': pricePerHr,
       'hours': hours,
       'totalPrice': totalPrice,
@@ -64,6 +110,12 @@ class Booking {
 
   // Create from JSON (for backend response)
   factory Booking.fromJson(Map<String, dynamic> json) {
+    DateTime? parseOptDate(dynamic val) {
+      if (val == null) return null;
+      if (val is String) return DateTime.tryParse(val);
+      return null;
+    }
+
     return Booking(
       id: json['id'],
       userId: json['userId'],
@@ -73,6 +125,8 @@ class Booking {
       stationName: json['stationName'],
       bookingDate: DateTime.parse(json['bookingDate']),
       timeSlot: json['timeSlot'],
+      startDateTime: parseOptDate(json['startDateTime']),
+      endDateTime: parseOptDate(json['endDateTime']),
       pricePerHr: json['pricePerHr'].toDouble(),
       hours: json['hours'],
       totalPrice: json['totalPrice'].toDouble(),
@@ -95,6 +149,14 @@ class Booking {
         if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
         if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
         return DateTime.now();
+      }
+
+      DateTime? parseNullableDate(dynamic value) {
+        if (value == null) return null;
+        if (value is Timestamp) return value.toDate();
+        if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+        if (value is String) return DateTime.tryParse(value);
+        return null;
       }
 
       double parseDouble(dynamic value, double defaultValue) {
@@ -122,18 +184,22 @@ class Booking {
         stationName: data['stationName']?.toString() ?? 'Unknown Station',
         bookingDate: parseDate(data['bookingDate']),
         timeSlot: data['timeSlot']?.toString() ?? '',
+        startDateTime: parseNullableDate(data['startDateTime']),
+        endDateTime: parseNullableDate(data['endDateTime']),
         pricePerHr: parseDouble(data['pricePerHr'], 0.0),
         hours: parseInt(data['hours'], 0),
         totalPrice: parseDouble(data['totalPrice'], 0.0),
         status: BookingStatus.values.firstWhere(
-          (e) => e.toString().split('.').last == (data['status']?.toString() ?? 'pending'),
+          (e) =>
+              e.toString().split('.').last ==
+              (data['status']?.toString() ?? 'pending'),
           orElse: () => BookingStatus.pending,
         ),
         rejectionReason: data['rejectionReason']?.toString(),
         portNumber: parseInt(data['portNumber'], 1),
       );
     } catch (e) {
-      print("Error parsing Booking ${doc.id}: $e");
+      debugPrint("Error parsing Booking ${doc.id}: $e");
       rethrow;
     }
   }

@@ -4,6 +4,27 @@ import 'package:amptrail_mini/models/station_model.dart';
 import 'package:amptrail_mini/models/booking_model.dart';
 import 'package:flutter/foundation.dart';
 
+class BookingResult {
+  final bool success;
+  final String? errorMessage;
+  final bool isConflict;
+
+  const BookingResult.success()
+    : success = true,
+      errorMessage = null,
+      isConflict = false;
+
+  const BookingResult.conflict(this.errorMessage)
+    : success = false,
+      isConflict = true;
+
+  const BookingResult.failure(this.errorMessage)
+    : success = false,
+      isConflict = false;
+
+  bool get isSuccess => success;
+}
+
 class StationService {
   // Singleton pattern to enable global caching
   static final StationService _instance = StationService._internal();
@@ -33,10 +54,10 @@ class StationService {
       }
 
       debugPrint("DEBUG: Fetching stations from Firestore...");
-      QuerySnapshot querySnapshot = await _firestore.collection(_collectionPath).get(
-        const GetOptions(source: Source.serverAndCache),
-      );
-      
+      QuerySnapshot querySnapshot = await _firestore
+          .collection(_collectionPath)
+          .get(const GetOptions(source: Source.serverAndCache));
+
       List<Station> stations = [];
       for (var doc in querySnapshot.docs) {
         try {
@@ -45,10 +66,10 @@ class StationService {
           debugPrint("ERROR parsing station doc ${doc.id}: $e");
         }
       }
-      
+
       _cachedStations = stations;
       _lastFetchTime = DateTime.now();
-      
+
       debugPrint("DEBUG: Successfully fetched ${stations.length} stations.");
       return stations;
     } catch (e) {
@@ -60,46 +81,104 @@ class StationService {
     }
   }
 
-  // Save a new booking to Firestore
-  Future<bool> saveBooking(Booking booking) async {
+  // Save a new booking to Firestore with atomic concurrency verification
+  Future<BookingResult> saveBooking(Booking booking) async {
     try {
-      debugPrint("DEBUG: Saving booking ${booking.id} to Firestore...");
-      await _firestore.collection('bookings').doc(booking.id).set(booking.toJson());
-      debugPrint("DEBUG: Booking saved successfully.");
-      return true;
+      debugPrint(
+        "DEBUG: Saving booking ${booking.id} to Firestore with concurrency verification...",
+      );
+
+      // 1. Concurrency verification: check for overlapping active slots on the same port & date
+      final querySnapshot = await _firestore
+          .collection('bookings')
+          .where('stationId', isEqualTo: booking.stationId)
+          .where('portNumber', isEqualTo: booking.portNumber)
+          .get(const GetOptions(source: Source.serverAndCache));
+
+      for (var doc in querySnapshot.docs) {
+        if (doc.id == booking.id) continue;
+        try {
+          final existing = Booking.fromFirestore(doc);
+          if (existing.bookingDate.year == booking.bookingDate.year &&
+              existing.bookingDate.month == booking.bookingDate.month &&
+              existing.bookingDate.day == booking.bookingDate.day) {
+            if (existing.overlapsWith(
+              booking.calculatedStart,
+              booking.calculatedEnd,
+            )) {
+              debugPrint(
+                "CONFLICT: Slot already reserved by booking ${existing.id}",
+              );
+              return const BookingResult.conflict(
+                "This slot has just been booked by another user. Please choose a different time or port.",
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint("Skipping doc in concurrency check: $e");
+        }
+      }
+
+      // 2. Commit write inside an atomic transaction
+      final docRef = _firestore.collection('bookings').doc(booking.id);
+      await _firestore.runTransaction((transaction) async {
+        transaction.set(docRef, booking.toJson());
+      });
+
+      debugPrint("DEBUG: Booking saved successfully without conflicts.");
+      return const BookingResult.success();
     } catch (e) {
       debugPrint("ERROR: Error saving booking: $e");
-      return false;
+      return BookingResult.failure(e.toString());
     }
   }
 
   // Get current user's bookings from Firestore with pagination capability
-  Future<List<Booking>> getMyBookings(String identifier, {String? userId, DocumentSnapshot? startAfter, int limit = 20}) async {
+  Future<List<Booking>> getMyBookings(
+    String identifier, {
+    String? userId,
+    DocumentSnapshot? startAfter,
+    int limit = 20,
+  }) async {
     try {
-      debugPrint("DEBUG: StationService - Fetching bookings for identifier: $identifier");
-      
-      Query query = _firestore.collection('bookings').where('userPhone', isEqualTo: identifier);
-      
+      debugPrint(
+        "DEBUG: StationService - Fetching bookings for identifier: $identifier",
+      );
+
+      Query query = _firestore
+          .collection('bookings')
+          .where('userPhone', isEqualTo: identifier);
+
       // Order by descending date first so startAfter logic works correctly
       query = query.orderBy('bookingDate', descending: true).limit(limit);
       if (startAfter != null) {
         query = query.startAfterDocument(startAfter);
       }
-      
+
       // Try by phone/email identifier
-      QuerySnapshot querySnapshot = await query.get(const GetOptions(source: Source.serverAndCache));
-      
+      QuerySnapshot querySnapshot = await query.get(
+        const GetOptions(source: Source.serverAndCache),
+      );
+
       // If empty and we have a userId, try by userId
       if (querySnapshot.docs.isEmpty && userId != null) {
-        debugPrint("DEBUG: No bookings found for $identifier, trying userId: $userId");
-        Query userQuery = _firestore.collection('bookings').where('userId', isEqualTo: userId);
-        userQuery = userQuery.orderBy('bookingDate', descending: true).limit(limit);
+        debugPrint(
+          "DEBUG: No bookings found for $identifier, trying userId: $userId",
+        );
+        Query userQuery = _firestore
+            .collection('bookings')
+            .where('userId', isEqualTo: userId);
+        userQuery = userQuery
+            .orderBy('bookingDate', descending: true)
+            .limit(limit);
         if (startAfter != null) {
           userQuery = userQuery.startAfterDocument(startAfter);
         }
-        querySnapshot = await userQuery.get(const GetOptions(source: Source.serverAndCache));
+        querySnapshot = await userQuery.get(
+          const GetOptions(source: Source.serverAndCache),
+        );
       }
-      
+
       List<Booking> bookings = [];
       for (var doc in querySnapshot.docs) {
         try {
@@ -111,8 +190,10 @@ class StationService {
 
       // Sort locally: newest first
       bookings.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
-      
-      debugPrint("DEBUG: StationService - Found ${bookings.length} fetched bookings.");
+
+      debugPrint(
+        "DEBUG: StationService - Found ${bookings.length} fetched bookings.",
+      );
       return bookings;
     } catch (e) {
       debugPrint("ERROR: StationService - Error fetching history: $e");
@@ -121,10 +202,16 @@ class StationService {
   }
 
   // Stream of bookings for real-time updates (Capped for performance)
-  Stream<List<Booking>> getBookingsStream(String identifier, {String? userId, int limit = 20}) {
-    debugPrint("DEBUG: StationService - Opening stream for $identifier (UID: $userId)");
-    
-    // We'll prioritize the field we find data in. For simplicity in a stream, 
+  Stream<List<Booking>> getBookingsStream(
+    String identifier, {
+    String? userId,
+    int limit = 20,
+  }) {
+    debugPrint(
+      "DEBUG: StationService - Opening stream for $identifier (UID: $userId)",
+    );
+
+    // We'll prioritize the field we find data in. For simplicity in a stream,
     // we can merge two streams if needed, but it's likely one will work.
     // Let's use the phone identifier for now as it's the primary field.
     return _firestore
@@ -133,7 +220,9 @@ class StationService {
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-          debugPrint("DEBUG: StationService - Stream received ${snapshot.docs.length} docs for phone.");
+          debugPrint(
+            "DEBUG: StationService - Stream received ${snapshot.docs.length} docs for phone.",
+          );
           final bookings = <Booking>[];
           for (var doc in snapshot.docs) {
             try {
@@ -189,12 +278,16 @@ class StationService {
   }
 
   // Get booked time slots for a specific station and date
-  Future<List<Booking>> getBookedSlotsForStation(String stationId, DateTime date) async {
+  Future<List<Booking>> getBookedSlotsForStation(
+    String stationId,
+    DateTime date,
+  ) async {
     try {
-      final querySnapshot = await _firestore
-          .collection('bookings')
-          .where('stationId', isEqualTo: stationId)
-          .get();
+      final querySnapshot =
+          await _firestore
+              .collection('bookings')
+              .where('stationId', isEqualTo: stationId)
+              .get();
 
       List<Booking> bookedSlots = [];
       for (var doc in querySnapshot.docs) {
@@ -226,23 +319,99 @@ class StationService {
         .where('stationId', isEqualTo: stationId)
         .snapshots()
         .map((snapshot) {
-      List<Booking> bookedSlots = [];
-      for (var doc in snapshot.docs) {
-        try {
-          final booking = Booking.fromFirestore(doc);
-          if (booking.status != BookingStatus.cancelled &&
-              booking.status != BookingStatus.rejected) {
-            if (booking.bookingDate.year == date.year &&
-                booking.bookingDate.month == date.month &&
-                booking.bookingDate.day == date.day) {
-              bookedSlots.add(booking);
+          List<Booking> bookedSlots = [];
+          for (var doc in snapshot.docs) {
+            try {
+              final booking = Booking.fromFirestore(doc);
+              if (booking.status != BookingStatus.cancelled &&
+                  booking.status != BookingStatus.rejected) {
+                if (booking.bookingDate.year == date.year &&
+                    booking.bookingDate.month == date.month &&
+                    booking.bookingDate.day == date.day) {
+                  bookedSlots.add(booking);
+                }
+              }
+            } catch (e) {
+              debugPrint("ERROR parsing booking for slots stream: $e");
             }
           }
+          return bookedSlots;
+        });
+  }
+
+  // ---------------------------------------------------------------------------
+  // ADMIN FIRESTORE SERVICES
+  // ---------------------------------------------------------------------------
+
+  /// Fetches real bookings from Firestore for the Admin panel.
+  Future<List<Booking>> getAdminBookings({String? statusFilter}) async {
+    try {
+      Query query = _firestore.collection('bookings');
+      if (statusFilter != null &&
+          statusFilter.isNotEmpty &&
+          statusFilter != 'all') {
+        query = query.where('status', isEqualTo: statusFilter);
+      }
+      query = query.orderBy('bookingDate', descending: true).limit(50);
+      final snapshot = await query.get(
+        const GetOptions(source: Source.serverAndCache),
+      );
+      final bookings = <Booking>[];
+      for (var doc in snapshot.docs) {
+        try {
+          bookings.add(Booking.fromFirestore(doc));
         } catch (e) {
-          debugPrint("ERROR parsing booking for slots stream: $e");
+          debugPrint("Error parsing admin booking doc: $e");
         }
       }
-      return bookedSlots;
+      return bookings;
+    } catch (e) {
+      debugPrint("ERROR: Error fetching admin bookings: $e");
+      return [];
+    }
+  }
+
+  /// Real-time stream of bookings for the Admin panel.
+  Stream<List<Booking>> adminBookingsStream({String? statusFilter}) {
+    Query query = _firestore.collection('bookings');
+    if (statusFilter != null &&
+        statusFilter.isNotEmpty &&
+        statusFilter != 'all') {
+      query = query.where('status', isEqualTo: statusFilter);
+    }
+    return query.limit(50).snapshots().map((snapshot) {
+      final bookings = <Booking>[];
+      for (var doc in snapshot.docs) {
+        try {
+          bookings.add(Booking.fromFirestore(doc));
+        } catch (e) {
+          debugPrint("Error parsing admin booking stream doc: $e");
+        }
+      }
+      bookings.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
+      return bookings;
     });
+  }
+
+  /// Updates status (e.g. accepted, rejected) of a real booking in Firestore.
+  Future<bool> updateBookingStatus(
+    String bookingId,
+    BookingStatus status, {
+    String? reason,
+  }) async {
+    try {
+      final Map<String, dynamic> updateData = {
+        'status': status.toString().split('.').last,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (reason != null && reason.isNotEmpty) {
+        updateData['rejectionReason'] = reason;
+      }
+      await _firestore.collection('bookings').doc(bookingId).update(updateData);
+      return true;
+    } catch (e) {
+      debugPrint("ERROR: Error updating booking status in Firestore: $e");
+      return false;
+    }
   }
 }
