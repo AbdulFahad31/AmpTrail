@@ -48,6 +48,24 @@ Electric vehicle drivers frequently encounter **fragmented station discovery**, 
 
 ---
 
+## 🛠️ Tech Stack & Specifications
+
+| Layer / Domain | Technology | Implementation Responsibility |
+|---|---|---|
+| **Mobile Framework** | [Flutter 3.x](https://flutter.dev/) | Cross-platform client UI, 60 FPS animations, reactive widget tree |
+| **Language** | [Dart 3.x](https://dart.dev/) | Strong null-safety, async runtime, domain logic |
+| **Mapping Engine** | [Mapbox Maps SDK v11](https://docs.mapbox.com/) | Vector map rendering, camera choreography, custom station markers |
+| **Geocoding & Location** | [Mapbox Places API](https://docs.mapbox.com/api/search/) & `geolocator` | GPS coordinate resolution, place query autocomplete, distance feeds |
+| **Primary Database** | [Cloud Firestore](https://firebase.google.com/docs/firestore) (`stations31`) | Multi-tenant NoSQL storage, live streaming snapshots, atomic transactions |
+| **Authentication** | [Firebase Phone Auth](https://firebase.google.com/docs/auth) | SMS OTP verification, persistent session tokens, UID binding |
+| **Cloud Compute** | [Firebase Cloud Functions](https://firebase.google.com/docs/functions) (Node.js 18) | Server-side Razorpay order signing, caller auth validation (`context.auth`) |
+| **Payment Gateway** | [Razorpay SDK](https://razorpay.com/docs/payments/payment-gateway/flutter-integration/) | Secure checkout flow, test/live mode order handling, callback verification |
+| **State Management** | `Provider` & Dart `Streams` | Theme state, favorites persistence, real-time booking streams |
+| **Testing & CI/CD** | `flutter_test` & [GitHub Actions](https://github.com/features/actions) | 11 unit & regression tests, static analysis, automated CI pipeline |
+| **Typography & UI** | Google Fonts (`Outfit`), `animate_do`, `shimmer` | Custom modern typography, micro-interactions, loading skeleton loaders |
+
+---
+
 ## 🏛️ System Architecture
 
 AmpTrail is structured into distinct, decoupled architectural layers ensuring separation of concerns, testability, and deterministic data flow.
@@ -241,49 +259,78 @@ AmpTrail/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started & Execution Guide
 
 ### Prerequisites
-- [Flutter SDK 3.x](https://docs.flutter.dev/get-started/install) (Channel `stable`)
-- [Android Studio](https://developer.android.com/studio) or [Xcode](https://developer.apple.com/xcode/)
-- A configured [Firebase Project](https://console.firebase.google.com/)
-- A [Mapbox](https://www.mapbox.com/) Access Token
+Before running the project locally, ensure your development workstation meets the following requirements:
 
-### Local Setup
+1. **Flutter & Dart SDK**: [Flutter 3.x](https://docs.flutter.dev/get-started/install) (Channel `stable`) and Dart 3.x.
+2. **Java Development Kit**: JDK 17 (recommended: Zulu or OpenJDK 17).
+3. **Target Platform Toolchains**:
+   - **Android**: Android Studio with Android SDK Platform 34 and Command-line Tools.
+   - **iOS** (macOS only): Xcode 15+ and CocoaPods.
+4. **Third-Party Service Credentials**:
+   - A [Mapbox Account](https://account.mapbox.com/) with a valid public access token (required for vector map tiles and geocoding).
+   - A [Razorpay Account](https://dashboard.razorpay.com/) (Test Key ID for sandbox payment execution).
+   - A [Firebase Project](https://console.firebase.google.com/) with Phone Auth and Firestore enabled (`stations31` database).
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/AbdulFahad31/AmpTrail.git
-   cd AmpTrail
-   ```
+---
 
-2. **Configure Environment Keys**:
-   Copy the example configuration:
-   ```bash
-   cp lib/config/api_keys.example.dart lib/config/api_keys.dart
-   ```
-   Add your API keys in `lib/config/api_keys.dart`:
-   ```dart
-   const String MAPBOX_TOKEN = 'your_mapbox_token_here';
-   const String RAZORPAY_KEY_ID = 'your_razorpay_key_id';
-   const String RAZORPAY_KEY_SECRET = 'your_razorpay_key_secret';
-   ```
+### Step-by-Step Local Setup
 
-3. **Install Dependencies**:
-   ```bash
-   flutter pub get
-   ```
+#### Step 1: Clone the Repository
+```bash
+git clone https://github.com/AbdulFahad31/AmpTrail.git
+cd AmpTrail
+```
 
-4. **Run Analysis & Tests**:
-   ```bash
-   flutter analyze
-   flutter test
-   ```
+#### Step 2: Configure Environment API Keys
+Copy the sanitized configuration template to create your local `api_keys.dart` (which is gitignored):
+```bash
+cp lib/config/api_keys.example.dart lib/config/api_keys.dart
+```
 
-5. **Launch Application**:
-   ```bash
-   flutter run
-   ```
+Open `lib/config/api_keys.dart` and supply your credentials:
+```dart
+const String MAPBOX_TOKEN = 'pk.eyJ1Ijoi...your_mapbox_token_here...';
+const String RAZORPAY_KEY_ID = 'rzp_test_...your_razorpay_key_id...';
+const String RAZORPAY_KEY_SECRET = 'your_razorpay_key_secret_for_backend';
+```
+
+#### Step 3: Firebase Configuration
+Place your project's `google-services.json` inside the `android/app/` directory:
+```text
+android/app/google-services.json
+```
+
+#### Step 4: Install Dependencies
+Fetch all required pub packages:
+```bash
+flutter pub get
+```
+
+#### Step 5: Verify Suite (Formatting, Analysis & Tests)
+Run verification commands to confirm system integrity:
+```bash
+# Check code formatting
+dart format --output=none --set-exit-if-changed .
+
+# Static analysis
+flutter analyze
+
+# Execute all unit and widget tests
+flutter test
+```
+
+#### Step 6: Launch on Device or Emulator
+Connect an Android device with USB debugging enabled, or start an emulator:
+```bash
+# List available devices
+flutter devices
+
+# Run the app
+flutter run
+```
 
 ---
 
@@ -300,6 +347,19 @@ AmpTrail/
 ### 3. Client-Side Haversine Math vs. Server-Side Geohashes
 - **Decision**: Computed geographical distances directly on the client using the Haversine formula in `GeoUtils`.
 - **Rationale**: For regional station discovery (< 1,000 stations in the active viewport), fetching station coordinates and calculating client-side distance avoids maintaining complex bounding-box geohash queries and reduces cloud database read costs.
+
+---
+
+## 🔮 Future Scalability & Improvements Roadmap
+
+To support enterprise EV fleets, multi-vendor station networks, and dynamic energy pricing, the following engineering enhancements are planned:
+
+- [ ] **OCPP 2.0.1 Protocol Integration**: Direct cloud-to-charger hardware telemetry via WebSocket, enabling live power delivery telemetry, remote start/stop session triggers, and real-time connector fault reporting.
+- [ ] **Dynamic Grid Load Balancing**: Intelligent queue scheduling that automatically throttles or staggers charging slot durations based on substation grid power caps and peak utility tariffs.
+- [ ] **Physical QR Dispenser Authentication**: Scan-to-plug verification using time-based cryptographic tokens on the dispenser display to verify physical driver arrival before activating high-voltage relays.
+- [ ] **Offline Booking Queue with Local SQLite Sync**: Optimistic local reservation caching with background SQLite synchronization for drivers operating in low-connectivity subterranean or remote highway parking facilities.
+- [ ] **In-App Turn-by-Turn EV Navigation**: Direct Mapbox Navigation SDK route synthesis calculating state-of-charge (SoC) consumption curves, elevation changes, and weather overhead along the journey.
+- [ ] **Push Notification Lifecycle Alerts**: Firebase Cloud Messaging (FCM) triggers when vehicle battery reaches 80% SoC, 10-minute slot expiration warnings, and overstay parking fee alerts.
 
 ---
 
