@@ -50,4 +50,11 @@ lib/config/api_keys.dart
 .env.*
 *.pem
 service-account*.json
-firebase-debug*.log
+firebase-debug*.log
+
+# Node & JavaScript dependencies
+node_modules/
+**/node_modules/
+package-lock.json
+npm-debug.log*
+
